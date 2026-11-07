@@ -112,4 +112,25 @@ export const checkRoomAvailability = async (roomTypeId, checkInDate, checkOutDat
   return response.data;
 };
 
+// Mystery Deals (Phase 5)
+export const fetchPublicDeals = async () => {
+  const response = await api.get('/deals');
+  return response.data;
+};
+
+export const fetchDealById = async (dealId) => {
+  const response = await api.get(`/deals/${dealId}`);
+  return response.data;
+};
+
+export const createMysteryDeal = async (dealData) => {
+  const response = await api.post('/deals', dealData);
+  return response.data;
+};
+
+export const fetchMyDeals = async () => {
+  const response = await api.get('/deals/my');
+  return response.data;
+};
+
 export default api;

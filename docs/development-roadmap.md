@@ -37,10 +37,14 @@
   - Mockito unit tests and MockMvc integration tests (24/24 test suite passing)
   - Interactive room category and calendar seeding interface in React frontend
 
-- [ ] **Phase 5: Mystery Deals Engine**
-  - Discounted pricing engine
-  - Strict identity-masking pipeline (clue generation, zone mapping)
-  - Masked DTO serialization guarantees
+- [x] **Phase 5: Mystery Deals Engine**
+  - Flyway migration `V5__mystery_deals_schema.sql` (`mystery_deals` table with constraints)
+  - Discounted pricing engine with validation (deal price strictly lower than room retail rate)
+  - Strict identity-masking pipeline: public deals completely mask hotel name, street address, contact info, and chain
+  - Exposes only city, zone area, star rating, mystery clue tags, description clues, and amenity hints
+  - Hotel manager portal for deal publication and lifecycle status toggle (`ACTIVE`, `EXPIRED`, `SOLD_OUT`, `CANCELLED`)
+  - Mockito unit tests and MockMvc integration tests (29/29 test suite passing)
+  - Interactive mystery deal discovery feed and manager deal creator in React frontend
 
 - [ ] **Phase 6: DSA-Powered Search & Recommendations**
   - Min/Max Heap (PriorityQueue) Top-$K$ deal ranker
