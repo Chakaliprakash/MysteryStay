@@ -146,4 +146,30 @@ export const fetchBestStayWindow = async (dealId, stayLength = 3) => {
   return response.data;
 };
 
+// Bookings & Concurrency Engine (Phase 7)
+export const createBooking = async (bookingData) => {
+  const response = await api.post('/bookings', bookingData);
+  return response.data;
+};
+
+export const fetchMyBookings = async () => {
+  const response = await api.get('/bookings/my');
+  return response.data;
+};
+
+export const fetchBookingByRef = async (reference) => {
+  const response = await api.get(`/bookings/${reference}`);
+  return response.data;
+};
+
+export const confirmBooking = async (bookingId) => {
+  const response = await api.post(`/bookings/${bookingId}/confirm`);
+  return response.data;
+};
+
+export const cancelBooking = async (bookingId) => {
+  const response = await api.post(`/bookings/${bookingId}/cancel`);
+  return response.data;
+};
+
 export default api;

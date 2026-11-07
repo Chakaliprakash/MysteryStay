@@ -54,10 +54,15 @@
   - Automated tests (43/43 total project tests passing)
   - Interactive DSA Search & Stay Optimizer explorer in React frontend with live algorithmic metrics
 
-- [ ] **Phase 7: Booking Engine & Concurrency Control**
-  - Multi-step transactional booking state machine
-  - Concurrency stress tests preventing overbooking
-  - Reservation auto-expiration timers
+- [x] **Phase 7: Booking Engine & Concurrency Control**
+  - Flyway migration `V6__booking_schema.sql` (`bookings` table with state machine & indexes)
+  - Multi-step transactional booking state machine (`PENDING_PAYMENT`, `CONFIRMED`, `CANCELLED`, `EXPIRED`)
+  - Concurrency locking with `@Lock(LockModeType.PESSIMISTIC_WRITE)` (`SELECT ... FOR UPDATE`) preventing double-booking
+  - 15-minute reservation expiration hold timers with background sweeper (`BookingExpirationWorker`)
+  - Identity reveal pipeline: hotel name, street address, and direct phone revealed strictly upon payment confirmation
+  - Multithreaded concurrency stress tests (10 simultaneous threads competing for 1 room $\to$ exactly 1 succeeds, 9 receive 409 Conflict)
+  - Automated tests (49/49 total project tests passing)
+  - Interactive Apple & Big-Tech inspired UI with glassmorphic cards, native modal checkout, and secret identity unlock celebration
 
 - [ ] **Phase 8: Payment Integration (Razorpay Sandbox)**
   - Order creation and client checkout
