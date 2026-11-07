@@ -19,10 +19,14 @@
   - Mockito unit tests and MockMvc integration tests (10/10 test suite passing)
   - Interactive auth testbench in React frontend
 
-- [ ] **Phase 3: User & Hotel Management**
-  - Hotel onboarding and manager ownership validation
-  - Admin hotel approval workflow
-  - Hotel metadata and amenity catalog
+- [x] **Phase 3: User & Hotel Management**
+  - Flyway migration `V3__hotel_and_amenity_schema.sql` (`amenities`, `hotels`, `hotel_amenities`)
+  - Hotel onboarding workflow for `ROLE_HOTEL_MANAGER`
+  - Strict ownership validation (cross-manager mutations rejected with 403 Forbidden)
+  - Admin approval workflow (`PATCH /api/v1/admin/hotels/{id}/verify` restricted to `ROLE_ADMIN`)
+  - Pre-seeded standard amenity catalog with mystery clue tags
+  - Mockito unit tests and MockMvc integration tests (17/17 test suite passing)
+  - Interactive property onboarding and admin verification panel in React frontend
 
 - [ ] **Phase 4: Room Inventory Engine**
   - Room category definitions
