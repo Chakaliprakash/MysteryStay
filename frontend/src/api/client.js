@@ -89,4 +89,27 @@ export const verifyHotelAdmin = async (hotelId, verify = true) => {
   return response.data;
 };
 
+// Room Types & Inventory (Phase 4)
+export const fetchRoomTypesByHotel = async (hotelId) => {
+  const response = await api.get(`/hotels/${hotelId}/room-types`);
+  return response.data;
+};
+
+export const createRoomType = async (hotelId, roomTypeData) => {
+  const response = await api.post(`/hotels/${hotelId}/room-types`, roomTypeData);
+  return response.data;
+};
+
+export const seedRoomInventory = async (hotelId, roomTypeId, seedData) => {
+  const response = await api.post(`/hotels/${hotelId}/room-types/${roomTypeId}/inventory`, seedData);
+  return response.data;
+};
+
+export const checkRoomAvailability = async (roomTypeId, checkInDate, checkOutDate, roomCount = 1) => {
+  const response = await api.get(`/room-types/${roomTypeId}/availability`, {
+    params: { checkInDate, checkOutDate, roomCount }
+  });
+  return response.data;
+};
+
 export default api;

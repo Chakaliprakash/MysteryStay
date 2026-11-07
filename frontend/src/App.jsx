@@ -9,7 +9,11 @@ import {
   createHotel,
   fetchMyHotels,
   fetchAdminHotels,
-  verifyHotelAdmin
+  verifyHotelAdmin,
+  createRoomType,
+  fetchRoomTypesByHotel,
+  seedRoomInventory,
+  checkRoomAvailability
 } from './api/client';
 import {
   Shield,
@@ -26,7 +30,10 @@ import {
   Building,
   CheckCheck,
   MapPin,
-  Star
+  Star,
+  BedDouble,
+  Calendar,
+  DollarSign
 } from 'lucide-react';
 
 export default function App() {
@@ -46,12 +53,13 @@ export default function App() {
   const [authMessage, setAuthMessage] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Phase 3 Hotel & Amenity State
+  // Hotel & Amenity State
   const [amenities, setAmenities] = useState([]);
   const [myHotels, setMyHotels] = useState([]);
   const [adminHotels, setAdminHotels] = useState([]);
   const [hotelLoading, setHotelLoading] = useState(false);
   const [hotelMessage, setHotelMessage] = useState(null);
+  const [selectedHotelId, setSelectedHotelId] = useState(null);
 
   const [hotelForm, setHotelForm] = useState({
     name: 'Grand Azure Palace',
@@ -66,6 +74,34 @@ export default function App() {
     phone: '+919876543210',
     email: 'reservations@grandazure.com'
   });
+
+  // Phase 4: Room Types & Inventory State
+  const [roomTypes, setRoomTypes] = useState([]);
+  const [selectedRoomTypeId, setSelectedRoomTypeId] = useState(null);
+  const [roomTypeForm, setRoomTypeForm] = useState({
+    name: 'Executive Balcony Suite',
+    category: 'EXECUTIVE_SUITE',
+    description: 'Luxury ocean view suite with king bed and private jacuzzi',
+    maxAdults: 2,
+    maxChildren: 1,
+    basePrice: '350.00'
+  });
+
+  const [seedForm, setSeedForm] = useState({
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+    totalRooms: 12,
+    priceOverride: ''
+  });
+
+  const [availQuery, setAvailQuery] = useState({
+    checkInDate: new Date().toISOString().split('T')[0],
+    checkOutDate: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
+    roomCount: 2
+  });
+  const [availabilityResult, setAvailabilityResult] = useState(null);
+  const [invLoading, setInvLoading] = useState(false);
+  const [invMessage, setInvMessage] = useState(null);
 
   const fetchHealth = async () => {
     setLoading(true);
@@ -97,12 +133,30 @@ export default function App() {
         setAdminHotels(res.data.content || []);
       } else if (currentUser.role === 'ROLE_HOTEL_MANAGER') {
         const res = await fetchMyHotels();
-        setMyHotels(res.data || []);
+        const list = res.data || [];
+        setMyHotels(list);
+        if (list.length > 0 && !selectedHotelId) {
+          setSelectedHotelId(list[0].id);
+        }
       }
     } catch {
       // Ignored
     } finally {
       setHotelLoading(false);
+    }
+  };
+
+  const loadRoomTypes = async (hotelId) => {
+    if (!hotelId) return;
+    try {
+      const res = await fetchRoomTypesByHotel(hotelId);
+      const list = res.data || [];
+      setRoomTypes(list);
+      if (list.length > 0 && !selectedRoomTypeId) {
+        setSelectedRoomTypeId(list[0].id);
+      }
+    } catch {
+      setRoomTypes([]);
     }
   };
 
@@ -120,6 +174,12 @@ export default function App() {
       loadHotels();
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (selectedHotelId) {
+      loadRoomTypes(selectedHotelId);
+    }
+  }, [selectedHotelId]);
 
   const loadProfile = async () => {
     try {
@@ -186,6 +246,67 @@ export default function App() {
     }
   };
 
+  const handleCreateRoomType = async (e) => {
+    e.preventDefault();
+    if (!selectedHotelId) return;
+    setInvLoading(true);
+    setInvMessage(null);
+    try {
+      const payload = {
+        ...roomTypeForm,
+        maxAdults: parseInt(roomTypeForm.maxAdults, 10),
+        maxChildren: parseInt(roomTypeForm.maxChildren, 10),
+        basePrice: parseFloat(roomTypeForm.basePrice)
+      };
+      await createRoomType(selectedHotelId, payload);
+      setInvMessage({ type: 'success', text: 'Room type configured successfully!' });
+      loadRoomTypes(selectedHotelId);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Failed to create room type.';
+      setInvMessage({ type: 'error', text: msg });
+    } finally {
+      setInvLoading(false);
+    }
+  };
+
+  const handleSeedInventory = async (e) => {
+    e.preventDefault();
+    if (!selectedHotelId || !selectedRoomTypeId) return;
+    setInvLoading(true);
+    setInvMessage(null);
+    try {
+      const payload = {
+        startDate: seedForm.startDate,
+        endDate: seedForm.endDate,
+        totalRooms: parseInt(seedForm.totalRooms, 10),
+        priceOverride: seedForm.priceOverride ? parseFloat(seedForm.priceOverride) : null
+      };
+      const res = await seedRoomInventory(selectedHotelId, selectedRoomTypeId, payload);
+      setInvMessage({ type: 'success', text: `Successfully seeded ${res.data.length} calendar days!` });
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Failed to seed inventory.';
+      setInvMessage({ type: 'error', text: msg });
+    } finally {
+      setInvLoading(false);
+    }
+  };
+
+  const handleCheckAvailability = async (e) => {
+    e.preventDefault();
+    if (!selectedRoomTypeId) return;
+    try {
+      const res = await checkRoomAvailability(
+        selectedRoomTypeId,
+        availQuery.checkInDate,
+        availQuery.checkOutDate,
+        availQuery.roomCount
+      );
+      setAvailabilityResult(res.data);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Availability check failed');
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await logoutUser(authResponse?.refreshToken);
@@ -196,6 +317,8 @@ export default function App() {
     setCurrentUser(null);
     setMyHotels([]);
     setAdminHotels([]);
+    setRoomTypes([]);
+    setAvailabilityResult(null);
     setAuthMessage({ type: 'info', text: 'Logged out successfully.' });
   };
 
@@ -212,7 +335,7 @@ export default function App() {
               <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
                 MysteryStay
                 <span className="text-xs bg-emerald-500/20 text-emerald-400 font-mono px-2 py-0.5 rounded-full border border-emerald-500/30">
-                  Phase 3: Hotel Management
+                  Phase 4: Inventory Engine
                 </span>
               </h1>
               <p className="text-xs text-slate-400">Intelligent Mystery Hotel Booking Platform</p>
@@ -254,7 +377,7 @@ export default function App() {
         <div className="text-center max-w-2xl mx-auto">
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold mb-4">
             <Shield className="w-3.5 h-3.5" />
-            <span>Phase 3 • Hotel Onboarding & Admin Verification</span>
+            <span>Phase 4 • Room Inventory Engine & Pessimistic Row Locking</span>
           </div>
           <h2 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
             Unsold Luxury,{' '}
@@ -267,6 +390,265 @@ export default function App() {
             Hotel identities remain strictly masked from customers until booking confirmation.
           </p>
         </div>
+
+        {/* Phase 4 Room Inventory Management Panel */}
+        {currentUser && (currentUser.role === 'ROLE_HOTEL_MANAGER' || currentUser.role === 'ROLE_ADMIN') && (
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-8">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center space-x-3">
+                <BedDouble className="w-6 h-6 text-indigo-400" />
+                <div>
+                  <h3 className="text-lg font-bold text-white">Room Inventory & Calendar Engine</h3>
+                  <p className="text-xs text-slate-400">
+                    Define room categories, seed daily capacity calendars, and verify date-range availability.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Select Hotel Dropdown */}
+            {myHotels.length > 0 && (
+              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-300">Active Property:</span>
+                <select
+                  value={selectedHotelId || ''}
+                  onChange={(e) => setSelectedHotelId(Number(e.target.value))}
+                  className="bg-slate-900 border border-slate-700 text-xs text-slate-100 rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-500"
+                >
+                  {myHotels.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name} ({h.city}) {h.verified ? '✓ Verified' : '⚠️ Pending'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Form 1: Create Room Type */}
+              <form onSubmit={handleCreateRoomType} className="space-y-4 bg-slate-950/60 p-5 rounded-2xl border border-slate-800/80">
+                <h4 className="text-sm font-semibold text-slate-200 flex items-center gap-1.5">
+                  <BedDouble className="w-4 h-4 text-indigo-400" />
+                  Add Room Category
+                </h4>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Room Type Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={roomTypeForm.name}
+                    onChange={(e) => setRoomTypeForm({ ...roomTypeForm, name: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Category</label>
+                    <select
+                      value={roomTypeForm.category}
+                      onChange={(e) => setRoomTypeForm({ ...roomTypeForm, category: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="STANDARD">Standard</option>
+                      <option value="DELUXE">Deluxe</option>
+                      <option value="EXECUTIVE_SUITE">Executive Suite</option>
+                      <option value="PRESIDENTIAL_SUITE">Presidential Suite</option>
+                      <option value="VILLA">Private Villa</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Base Retail Price ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={roomTypeForm.basePrice}
+                      onChange={(e) => setRoomTypeForm({ ...roomTypeForm, basePrice: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={invLoading || !selectedHotelId}
+                  className="w-full py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition disabled:opacity-50"
+                >
+                  Save Room Category
+                </button>
+              </form>
+
+              {/* Form 2: Seed Calendar */}
+              <form onSubmit={handleSeedInventory} className="space-y-4 bg-slate-950/60 p-5 rounded-2xl border border-slate-800/80">
+                <h4 className="text-sm font-semibold text-slate-200 flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-amber-400" />
+                  Seed Daily Inventory Calendar
+                </h4>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Target Room Category</label>
+                  <select
+                    value={selectedRoomTypeId || ''}
+                    onChange={(e) => setSelectedRoomTypeId(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                  >
+                    {roomTypes.length === 0 ? (
+                      <option value="">No categories defined yet</option>
+                    ) : (
+                      roomTypes.map((rt) => (
+                        <option key={rt.id} value={rt.id}>
+                          {rt.name} (${rt.basePrice}/night)
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      required
+                      value={seedForm.startDate}
+                      onChange={(e) => setSeedForm({ ...seedForm, startDate: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">End Date</label>
+                    <input
+                      type="date"
+                      required
+                      value={seedForm.endDate}
+                      onChange={(e) => setSeedForm({ ...seedForm, endDate: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Total Rooms / Day</label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={seedForm.totalRooms}
+                      onChange={(e) => setSeedForm({ ...seedForm, totalRooms: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Price Override ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Optional"
+                      value={seedForm.priceOverride}
+                      onChange={(e) => setSeedForm({ ...seedForm, priceOverride: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={invLoading || !selectedRoomTypeId}
+                  className="w-full py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs transition disabled:opacity-50"
+                >
+                  Generate Daily Inventory
+                </button>
+              </form>
+            </div>
+
+            {invMessage && (
+              <div className={`p-3 rounded-xl text-xs flex items-center space-x-2 border ${invMessage.type === 'success' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/10 text-rose-300 border-rose-500/30'}`}>
+                {invMessage.type === 'success' ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+                <span>{invMessage.text}</span>
+              </div>
+            )}
+
+            {/* Test Multi-day Availability Inspector */}
+            <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-4">
+              <h4 className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
+                <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                Live Date-Range Availability & Pricing Simulator
+              </h4>
+              <form onSubmit={handleCheckAvailability} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-[11px] text-slate-400 mb-1">Check-in</label>
+                  <input
+                    type="date"
+                    required
+                    value={availQuery.checkInDate}
+                    onChange={(e) => setAvailQuery({ ...availQuery, checkInDate: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-slate-400 mb-1">Check-out</label>
+                  <input
+                    type="date"
+                    required
+                    value={availQuery.checkOutDate}
+                    onChange={(e) => setAvailQuery({ ...availQuery, checkOutDate: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-slate-400 mb-1">Rooms Needed</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={availQuery.roomCount}
+                    onChange={(e) => setAvailQuery({ ...availQuery, roomCount: parseInt(e.target.value, 10) })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-100"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    disabled={!selectedRoomTypeId}
+                    className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs font-medium rounded-lg border border-slate-600 transition"
+                  >
+                    Query Availability
+                  </button>
+                </div>
+              </form>
+
+              {availabilityResult && (
+                <div className="p-4 bg-slate-900 rounded-xl border border-slate-800 text-xs space-y-2">
+                  <div className="flex items-center justify-between font-mono">
+                    <span className="text-slate-400">Status:</span>
+                    {availabilityResult.available ? (
+                      <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                        <CheckCheck className="w-3.5 h-3.5" />
+                        AVAILABLE ({availabilityResult.minAvailableRooms} rooms available across all nights)
+                      </span>
+                    ) : (
+                      <span className="text-rose-400 font-semibold flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        INSUFFICIENT ROOMS
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between font-mono">
+                    <span className="text-slate-400">Duration:</span>
+                    <span>{availabilityResult.totalNights} nights</span>
+                  </div>
+                  <div className="flex items-center justify-between font-mono">
+                    <span className="text-slate-400">Total Calculated Cost:</span>
+                    <span className="text-amber-400 font-bold">${availabilityResult.totalCost.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Phase 3 Hotel Management Panel */}
         {currentUser && (currentUser.role === 'ROLE_HOTEL_MANAGER' || currentUser.role === 'ROLE_ADMIN') && (
@@ -610,7 +992,7 @@ export default function App() {
                 </div>
               ) : (
                 <div className="text-slate-500 py-8 text-center">
-                  No active session. Sign in as HOTEL_MANAGER or ADMIN to test property onboarding and verification.
+                  No active session. Sign in as HOTEL_MANAGER or ADMIN to test inventory calendar seeding and capacity checks.
                 </div>
               )}
             </div>
@@ -619,9 +1001,9 @@ export default function App() {
 
         {/* Amenity Catalog Clues */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
-          <h3 className="text-base font-bold text-white mb-2">Public Amenity & Clue Catalog (Phase 3 Flyway Seed)</h3>
+          <h3 className="text-base font-bold text-white mb-2">Public Amenity & Clue Catalog</h3>
           <p className="text-xs text-slate-400 mb-6">
-            These standardized amenities will serve as anonymous clues in Phase 5 without compromising hotel identity.
+            Standardized luxury amenities used as anonymous clues without revealing hotel identity.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {amenities.map((a) => (
