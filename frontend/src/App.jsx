@@ -1,46 +1,125 @@
 import React, { useState, useEffect } from 'react';
-import { checkSystemHealth, registerUser, loginUser, fetchCurrentUser, logoutUser } from './api/client';
-import { Shield, Sparkles, Database, CheckCircle2, AlertCircle, RefreshCw, Layers, Key, UserCheck, LogOut, Lock } from 'lucide-react';
+import {
+  checkSystemHealth,
+  registerUser,
+  loginUser,
+  fetchCurrentUser,
+  logoutUser,
+  fetchAmenities,
+  createHotel,
+  fetchMyHotels,
+  fetchAdminHotels,
+  verifyHotelAdmin
+} from './api/client';
+import {
+  Shield,
+  Sparkles,
+  Database,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+  Layers,
+  Key,
+  UserCheck,
+  LogOut,
+  Lock,
+  Building,
+  CheckCheck,
+  MapPin,
+  Star
+} from 'lucide-react';
 
 export default function App() {
   const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   // Auth State
-  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+  const [authMode, setAuthMode] = useState('login');
   const [formData, setFormData] = useState({
-    email: 'traveler@mysterystay.com',
+    email: 'manager@grandazure.com',
     password: 'Password123!',
-    fullName: 'Alex Morgan',
-    role: 'ROLE_CUSTOMER'
+    fullName: 'Robert Sterling',
+    role: 'ROLE_HOTEL_MANAGER'
   });
   const [authResponse, setAuthResponse] = useState(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [authMessage, setAuthMessage] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
 
+  // Phase 3 Hotel & Amenity State
+  const [amenities, setAmenities] = useState([]);
+  const [myHotels, setMyHotels] = useState([]);
+  const [adminHotels, setAdminHotels] = useState([]);
+  const [hotelLoading, setHotelLoading] = useState(false);
+  const [hotelMessage, setHotelMessage] = useState(null);
+
+  const [hotelForm, setHotelForm] = useState({
+    name: 'Grand Azure Palace',
+    brandChain: 'Azure Resorts',
+    starRating: 5,
+    address: '42 Ocean View Boulevard',
+    city: 'Bangalore',
+    zoneArea: 'Indiranagar',
+    postalCode: '560038',
+    latitude: '12.9716000',
+    longitude: '77.5946000',
+    phone: '+919876543210',
+    email: 'reservations@grandazure.com'
+  });
+
   const fetchHealth = async () => {
     setLoading(true);
-    setError(null);
     try {
       const res = await checkSystemHealth();
       setHealth(res.data);
-    } catch (err) {
-      setError(err.message || 'Failed to connect to backend service.');
+    } catch {
+      // Ignored
     } finally {
       setLoading(false);
     }
   };
 
+  const loadAmenities = async () => {
+    try {
+      const res = await fetchAmenities();
+      setAmenities(res.data || []);
+    } catch {
+      // Ignored
+    }
+  };
+
+  const loadHotels = async () => {
+    if (!currentUser) return;
+    setHotelLoading(true);
+    try {
+      if (currentUser.role === 'ROLE_ADMIN') {
+        const res = await fetchAdminHotels();
+        setAdminHotels(res.data.content || []);
+      } else if (currentUser.role === 'ROLE_HOTEL_MANAGER') {
+        const res = await fetchMyHotels();
+        setMyHotels(res.data || []);
+      }
+    } catch {
+      // Ignored
+    } finally {
+      setHotelLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchHealth();
-    // Check if user session exists
+    loadAmenities();
     const token = localStorage.getItem('mystery_access_token');
     if (token) {
       loadProfile();
     }
   }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadHotels();
+    }
+  }, [currentUser]);
 
   const loadProfile = async () => {
     try {
@@ -58,18 +137,10 @@ export default function App() {
     try {
       let res;
       if (authMode === 'register') {
-        res = await registerUser({
-          email: formData.email,
-          password: formData.password,
-          fullName: formData.fullName,
-          role: formData.role
-        });
+        res = await registerUser(formData);
         setAuthMessage({ type: 'success', text: 'Registration successful! JWT tokens issued.' });
       } else {
-        res = await loginUser({
-          email: formData.email,
-          password: formData.password
-        });
+        res = await loginUser({ email: formData.email, password: formData.password });
         setAuthMessage({ type: 'success', text: 'Login successful!' });
       }
 
@@ -84,6 +155,37 @@ export default function App() {
     }
   };
 
+  const handleCreateHotel = async (e) => {
+    e.preventDefault();
+    setHotelLoading(true);
+    setHotelMessage(null);
+    try {
+      const payload = {
+        ...hotelForm,
+        starRating: parseInt(hotelForm.starRating, 10),
+        latitude: parseFloat(hotelForm.latitude),
+        longitude: parseFloat(hotelForm.longitude)
+      };
+      await createHotel(payload);
+      setHotelMessage({ type: 'success', text: 'Hotel submitted! Status: Pending Platform Admin Verification.' });
+      loadHotels();
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Hotel creation failed.';
+      setHotelMessage({ type: 'error', text: msg });
+    } finally {
+      setHotelLoading(false);
+    }
+  };
+
+  const handleVerifyHotel = async (hotelId, verifyStatus) => {
+    try {
+      await verifyHotelAdmin(hotelId, verifyStatus);
+      loadHotels();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Verification failed');
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await logoutUser(authResponse?.refreshToken);
@@ -92,6 +194,8 @@ export default function App() {
     }
     setAuthResponse(null);
     setCurrentUser(null);
+    setMyHotels([]);
+    setAdminHotels([]);
     setAuthMessage({ type: 'info', text: 'Logged out successfully.' });
   };
 
@@ -108,7 +212,7 @@ export default function App() {
               <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
                 MysteryStay
                 <span className="text-xs bg-emerald-500/20 text-emerald-400 font-mono px-2 py-0.5 rounded-full border border-emerald-500/30">
-                  Phase 2: Auth Active
+                  Phase 3: Hotel Management
                 </span>
               </h1>
               <p className="text-xs text-slate-400">Intelligent Mystery Hotel Booking Platform</p>
@@ -150,7 +254,7 @@ export default function App() {
         <div className="text-center max-w-2xl mx-auto">
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold mb-4">
             <Shield className="w-3.5 h-3.5" />
-            <span>Spring Security 6 • Stateless JWT • RBAC</span>
+            <span>Phase 3 • Hotel Onboarding & Admin Verification</span>
           </div>
           <h2 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
             Unsold Luxury,{' '}
@@ -160,9 +264,220 @@ export default function App() {
           </h2>
           <p className="mt-4 text-slate-400 text-base leading-relaxed">
             Helping 4 & 5-star hotels monetize unsold room inventory without compromising retail rate integrity. 
-            Hotel names remain masked until booking confirmation.
+            Hotel identities remain strictly masked from customers until booking confirmation.
           </p>
         </div>
+
+        {/* Phase 3 Hotel Management Panel */}
+        {currentUser && (currentUser.role === 'ROLE_HOTEL_MANAGER' || currentUser.role === 'ROLE_ADMIN') && (
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center space-x-3">
+                <Building className="w-6 h-6 text-indigo-400" />
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    {currentUser.role === 'ROLE_ADMIN' ? 'Platform Admin: Hotel Verification Portal' : 'Hotel Partner: Property Onboarding & Management'}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {currentUser.role === 'ROLE_ADMIN'
+                      ? 'Review registered hotels across cities and approve verification for inventory publishing.'
+                      : 'Onboard your 4/5-star property. Unverified properties cannot publish mystery inventory.'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={loadHotels}
+                disabled={hotelLoading}
+                className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition flex items-center space-x-1.5 border border-slate-700 text-slate-200"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${hotelLoading ? 'animate-spin' : ''}`} />
+                <span>Refresh Hotels</span>
+              </button>
+            </div>
+
+            {/* If Hotel Manager: Show Onboarding Form + My Hotels */}
+            {currentUser.role === 'ROLE_HOTEL_MANAGER' && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Form */}
+                <form onSubmit={handleCreateHotel} className="space-y-4">
+                  <h4 className="text-sm font-semibold text-slate-200">Onboard New Property</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">Hotel Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={hotelForm.name}
+                        onChange={(e) => setHotelForm({ ...hotelForm, name: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">Brand Chain</label>
+                      <input
+                        type="text"
+                        value={hotelForm.brandChain}
+                        onChange={(e) => setHotelForm({ ...hotelForm, brandChain: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">Star Rating (1-5)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="5"
+                        required
+                        value={hotelForm.starRating}
+                        onChange={(e) => setHotelForm({ ...hotelForm, starRating: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">City</label>
+                      <input
+                        type="text"
+                        required
+                        value={hotelForm.city}
+                        onChange={(e) => setHotelForm({ ...hotelForm, city: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">Zone / Area</label>
+                      <input
+                        type="text"
+                        required
+                        value={hotelForm.zoneArea}
+                        onChange={(e) => setHotelForm({ ...hotelForm, zoneArea: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Street Address</label>
+                    <input
+                      type="text"
+                      required
+                      value={hotelForm.address}
+                      onChange={(e) => setHotelForm({ ...hotelForm, address: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={hotelLoading}
+                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition shadow-lg shadow-indigo-500/25"
+                  >
+                    Submit Property for Verification
+                  </button>
+
+                  {hotelMessage && (
+                    <div className={`p-3 rounded-xl text-xs flex items-center space-x-2 border ${hotelMessage.type === 'success' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/10 text-rose-300 border-rose-500/30'}`}>
+                      {hotelMessage.type === 'success' ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+                      <span>{hotelMessage.text}</span>
+                    </div>
+                  )}
+                </form>
+
+                {/* My Properties List */}
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-200 mb-3">My Managed Properties</h4>
+                  {myHotels.length === 0 ? (
+                    <div className="p-8 text-center text-xs text-slate-500 bg-slate-950 rounded-2xl border border-slate-800">
+                      No properties onboarded yet. Fill out the form to register your first hotel.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {myHotels.map((h) => (
+                        <div key={h.id} className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <span className="font-semibold text-sm text-white">{h.name}</span>
+                              <span className="flex items-center text-amber-400 text-xs">
+                                <Star className="w-3 h-3 fill-current inline mr-0.5" />
+                                {h.starRating}
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-2 text-xs text-slate-400 mt-1">
+                              <MapPin className="w-3 h-3 text-slate-500" />
+                              <span>{h.zoneArea}, {h.city}</span>
+                            </div>
+                          </div>
+                          <div>
+                            {h.verified ? (
+                              <span className="inline-flex items-center space-x-1 text-xs bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/30">
+                                <CheckCheck className="w-3.5 h-3.5" />
+                                <span>Verified</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center space-x-1 text-xs bg-amber-500/10 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/30">
+                                <AlertCircle className="w-3.5 h-3.5" />
+                                <span>Pending Admin</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* If Admin: Show All Platform Hotels with Verify Toggle */}
+            {currentUser.role === 'ROLE_ADMIN' && (
+              <div>
+                <h4 className="text-sm font-semibold text-slate-200 mb-3">All Platform Hotels</h4>
+                {adminHotels.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-500 bg-slate-950 rounded-2xl border border-slate-800">
+                    No hotels registered across platform yet.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {adminHotels.map((h) => (
+                      <div key={h.id} className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-semibold text-sm text-white">{h.name}</span>
+                            <span className="text-xs text-slate-400">({h.brandChain || 'Independent'})</span>
+                            <span className="flex items-center text-amber-400 text-xs">
+                              <Star className="w-3 h-3 fill-current inline mr-0.5" />
+                              {h.starRating}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-xs text-slate-400 mt-1">
+                            <MapPin className="w-3 h-3 text-slate-500" />
+                            <span>{h.zoneArea}, {h.city}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          {h.verified ? (
+                            <span className="text-xs bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/30">
+                              Verified
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleVerifyHotel(h.id, true)}
+                              className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-3 py-1 rounded-lg transition"
+                            >
+                              Approve & Verify
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Interactive Authentication Panel */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
@@ -170,10 +485,10 @@ export default function App() {
             <div>
               <div className="flex items-center space-x-2">
                 <Key className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-lg font-bold text-white">Phase 2: Security & Authentication Testbench</h3>
+                <h3 className="text-lg font-bold text-white">Security & Authentication Testbench</h3>
               </div>
               <p className="text-xs text-slate-400 mt-1">
-                Test JWT issuance, BCrypt password validation, and Role-Based Access Control endpoints.
+                Switch roles to test permissions: CUSTOMER, HOTEL_MANAGER, or ADMIN.
               </p>
             </div>
             <div className="inline-flex p-1 rounded-xl bg-slate-950 border border-slate-800 text-xs">
@@ -206,8 +521,7 @@ export default function App() {
                       required
                       value={formData.fullName}
                       onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition"
-                      placeholder="e.g. Alex Morgan"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
                     />
                   </div>
                   <div>
@@ -215,7 +529,7 @@ export default function App() {
                     <select
                       value={formData.role}
                       onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
                     >
                       <option value="ROLE_CUSTOMER">CUSTOMER (Traveler)</option>
                       <option value="ROLE_HOTEL_MANAGER">HOTEL_MANAGER (Hotel Partner)</option>
@@ -232,20 +546,18 @@ export default function App() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition"
-                  placeholder="name@mysterystay.com"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Password (min 8 chars)</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Password</label>
                 <input
                   type="password"
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition"
-                  placeholder="••••••••"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
@@ -254,11 +566,7 @@ export default function App() {
                 disabled={authLoading}
                 className="w-full inline-flex items-center justify-center space-x-2 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-medium text-sm transition shadow-lg shadow-indigo-500/25 disabled:opacity-50"
               >
-                {authLoading ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Lock className="w-4 h-4" />
-                )}
+                {authLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
                 <span>{authMode === 'register' ? 'Register Account' : 'Authenticate & Issue JWT'}</span>
               </button>
 
@@ -278,10 +586,7 @@ export default function App() {
                   Live Security Context
                 </span>
                 {currentUser && (
-                  <button
-                    onClick={loadProfile}
-                    className="text-[11px] text-indigo-400 hover:underline flex items-center gap-1"
-                  >
+                  <button onClick={loadProfile} className="text-[11px] text-indigo-400 hover:underline flex items-center gap-1">
                     <RefreshCw className="w-3 h-3" />
                     GET /api/v1/auth/me
                   </button>
@@ -305,87 +610,29 @@ export default function App() {
                 </div>
               ) : (
                 <div className="text-slate-500 py-8 text-center">
-                  No active session. Sign in or register to inspect issued JWT claims and validated Spring Security Principal.
+                  No active session. Sign in as HOTEL_MANAGER or ADMIN to test property onboarding and verification.
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* System Diagnostics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-semibold text-slate-400">Backend Status</span>
-              {health?.status === 'UP' ? (
-                <span className="inline-flex items-center space-x-1 text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>UP</span>
-                </span>
-              ) : (
-                <span className="inline-flex items-center space-x-1 text-xs bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/30">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  <span>{loading ? 'Checking...' : 'Standby'}</span>
-                </span>
-              )}
-            </div>
-            <div className="space-y-2 text-xs font-mono text-slate-300">
-              <div className="flex justify-between py-1 border-b border-slate-800/60">
-                <span className="text-slate-500">Database:</span>
-                <span className="text-emerald-400 font-semibold">{health?.details?.database || 'MySQL 8.4 / 9.x'}</span>
+        {/* Amenity Catalog Clues */}
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
+          <h3 className="text-base font-bold text-white mb-2">Public Amenity & Clue Catalog (Phase 3 Flyway Seed)</h3>
+          <p className="text-xs text-slate-400 mb-6">
+            These standardized amenities will serve as anonymous clues in Phase 5 without compromising hotel identity.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {amenities.map((a) => (
+              <div key={a.id} className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center space-x-3">
+                <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
+                <div>
+                  <div className="text-xs font-semibold text-slate-200">{a.name}</div>
+                  <div className="text-[10px] text-slate-500">{a.mysteryClue ? 'Public Mystery Clue' : 'Standard'}</div>
+                </div>
               </div>
-              <div className="flex justify-between py-1 border-b border-slate-800/60">
-                <span className="text-slate-500">Migrations:</span>
-                <span>Flyway V1 + V2 Applied</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-slate-500">Security:</span>
-                <span className="text-indigo-400">BCrypt 12 + JWT</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-            <div className="flex items-center space-x-2 text-sm font-semibold text-slate-300 mb-4">
-              <Layers className="w-4 h-4 text-indigo-400" />
-              <span>Security Architecture</span>
-            </div>
-            <ul className="space-y-2 text-xs text-slate-400">
-              <li className="flex items-center space-x-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                <span><strong>Stateless JWT</strong> (15-min access expiration)</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                <span><strong>Opaque Refresh Token</strong> (Rotated on use)</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                <span><strong>Unified 401 & 403 JSON</strong> Handlers</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                <span><strong>Role-Based Access Control</strong> (RBAC)</span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-            <div className="flex items-center space-x-2 text-sm font-semibold text-slate-300 mb-4">
-              <Database className="w-4 h-4 text-amber-400" />
-              <span>Next Milestones</span>
-            </div>
-            <div className="space-y-2.5 text-xs text-slate-400">
-              <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
-                <span className="font-semibold">Phase 2:</span> Completed & Verified
-              </div>
-              <div className="p-2 rounded-lg bg-slate-800/50 border border-slate-700/50">
-                <span className="font-semibold text-slate-200">Phase 3:</span> Hotel Verification & Management
-              </div>
-              <div className="p-2 rounded-lg bg-slate-800/50 border border-slate-700/50">
-                <span className="font-semibold text-slate-200">Phase 4:</span> Inventory Engine with Pessimistic Locking
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </main>

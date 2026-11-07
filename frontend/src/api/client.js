@@ -26,7 +26,6 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     if (error.response?.status === 401 && !originalRequest._retry) {
-      // Clear token if expired and unauthorized
       localStorage.removeItem('mystery_access_token');
       localStorage.removeItem('mystery_user');
     }
@@ -34,11 +33,13 @@ api.interceptors.response.use(
   }
 );
 
+// System Health
 export const checkSystemHealth = async () => {
   const response = await api.get('/health');
   return response.data;
 };
 
+// Auth
 export const registerUser = async (userData) => {
   const response = await api.post('/auth/register', userData);
   return response.data;
@@ -58,6 +59,33 @@ export const logoutUser = async (refreshToken) => {
   const response = await api.post('/auth/logout', { refreshToken });
   localStorage.removeItem('mystery_access_token');
   localStorage.removeItem('mystery_user');
+  return response.data;
+};
+
+// Amenities
+export const fetchAmenities = async () => {
+  const response = await api.get('/amenities');
+  return response.data;
+};
+
+// Hotels
+export const createHotel = async (hotelData) => {
+  const response = await api.post('/hotels', hotelData);
+  return response.data;
+};
+
+export const fetchMyHotels = async () => {
+  const response = await api.get('/hotels/my');
+  return response.data;
+};
+
+export const fetchAdminHotels = async () => {
+  const response = await api.get('/admin/hotels');
+  return response.data;
+};
+
+export const verifyHotelAdmin = async (hotelId, verify = true) => {
+  const response = await api.patch(`/admin/hotels/${hotelId}/verify?verify=${verify}`);
   return response.data;
 };
 
