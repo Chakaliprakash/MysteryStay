@@ -10,10 +10,14 @@
   - React + Vite + Tailwind CSS frontend scaffold with health ping UI
   - Multi-stage Docker configuration
 
-- [ ] **Phase 2: Authentication & Authorization**
-  - User registration, BCrypt password hashing
-  - JWT token generation, verification, and rotation
-  - Spring Security Filter Chain & RBAC (`CUSTOMER`, `HOTEL_MANAGER`, `ADMIN`)
+- [x] **Phase 2: Authentication & Authorization**
+  - Flyway migration `V2__auth_and_user_schema.sql` (`users`, `refresh_tokens`)
+  - User registration, BCrypt password hashing (strength 12)
+  - JWT token generation (15-min access), opaque refresh tokens (7-day rotation)
+  - Spring Security 6 stateless filter chain & custom 401/403 JSON handlers
+  - Role-Based Access Control (`ROLE_CUSTOMER`, `ROLE_HOTEL_MANAGER`, `ROLE_ADMIN`)
+  - Mockito unit tests and MockMvc integration tests (10/10 test suite passing)
+  - Interactive auth testbench in React frontend
 
 - [ ] **Phase 3: User & Hotel Management**
   - Hotel onboarding and manager ownership validation
