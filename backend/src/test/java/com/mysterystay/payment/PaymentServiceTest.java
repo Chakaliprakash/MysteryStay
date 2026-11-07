@@ -51,6 +51,11 @@ class PaymentServiceTest {
         ReflectionTestUtils.setField(paymentService, "keySecret", testKeySecret);
         ReflectionTestUtils.setField(paymentService, "webhookSecret", "MysteryStayWebhookSecret2026");
         ReflectionTestUtils.setField(paymentService, "defaultCurrency", "USD");
+        ReflectionTestUtils.setField(paymentService, "upiVpa", "6302714896@mbk");
+        ReflectionTestUtils.setField(paymentService, "upiPayeeName", "MysteryStay Prive");
+        ReflectionTestUtils.setField(paymentService, "upiCurrency", "INR");
+        ReflectionTestUtils.setField(paymentService, "usdToInrRate", new BigDecimal("85.00"));
+        ReflectionTestUtils.setField(paymentService, "upiExpiryMinutes", 15);
     }
 
     private BookingResponse createMockBooking(Long id, BookingStatus status, BigDecimal total) {
@@ -208,5 +213,86 @@ class PaymentServiceTest {
         assertThat(response.status()).isEqualTo(PaymentStatus.SUCCESS);
 
         verify(bookingService).confirmBooking(eq(100L), any(), eq(true));
+    }
+
+    @Test
+    @DisplayName("createUpiPaymentOrder: Successfully creates a dynamic UPI QR order with standard UPI URI")
+    void createUpiPaymentOrder_Success() {
+        BookingResponse pendingBooking = createMockBooking(100L, BookingStatus.PENDING_PAYMENT, new BigDecimal("100.00"));
+
+        when(bookingService.getBookingById(100L)).thenReturn(pendingBooking);
+        when(paymentRepository.findByBookingId(100L)).thenReturn(Optional.empty());
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(i -> i.getArgument(0));
+
+        UpiPaymentOrderResponse response = paymentService.createUpiPaymentOrder(new CreateUpiPaymentOrderRequest(100L), 1L);
+
+        assertThat(response).isNotNull();
+        assertThat(response.bookingId()).isEqualTo(100L);
+        assertThat(response.upiId()).isEqualTo("6302714896@mbk");
+        assertThat(response.payeeName()).isEqualTo("MysteryStay Prive");
+        assertThat(response.currency()).isEqualTo("INR");
+        assertThat(response.amountInInr()).isEqualTo(new BigDecimal("8500.00")); // 100 * 85
+        assertThat(response.upiUri()).contains("pa=6302714896@mbk");
+        assertThat(response.upiUri()).contains("cu=INR");
+        assertThat(response.upiUri()).contains("am=8500.00");
+        assertThat(response.supportedApps()).contains("Google Pay", "PhonePe", "Paytm");
+        assertThat(response.status()).isEqualTo(PaymentStatus.PENDING);
+
+        verify(paymentRepository).save(any(Payment.class));
+    }
+
+    @Test
+    @DisplayName("verifyUpiPayment: Successfully verifies payment, marks SUCCESS and confirms booking")
+    void verifyUpiPayment_Success() {
+        Payment payment = new Payment(100L, "upi_ord_12345", new BigDecimal("8500.00"), "INR");
+        payment.setPaymentMethod("UPI_QR");
+        payment.setUpiVpa("6302714896@mbk");
+        payment.setStatus(PaymentStatus.PENDING);
+        String ref = payment.getPaymentReference();
+
+        BookingResponse confirmedBooking = createMockBooking(100L, BookingStatus.CONFIRMED, new BigDecimal("100.00"));
+
+        when(paymentRepository.findByPaymentReference(ref)).thenReturn(Optional.of(payment));
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(i -> i.getArgument(0));
+        when(bookingService.confirmBooking(eq(100L), eq(1L), eq(false))).thenReturn(confirmedBooking);
+
+        PaymentVerificationResponse response = paymentService.verifyUpiPayment(
+                new VerifyUpiPaymentRequest(ref, "UPI_UTR_99887766", "Paid via Google Pay"),
+                1L,
+                false
+        );
+
+        assertThat(response).isNotNull();
+        assertThat(response.bookingConfirmed()).isTrue();
+        assertThat(response.status()).isEqualTo(PaymentStatus.SUCCESS);
+        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.SUCCESS);
+        assertThat(payment.getUpiTransactionId()).isEqualTo("UPI_UTR_99887766");
+
+        verify(bookingService).confirmBooking(100L, 1L, false);
+    }
+
+    @Test
+    @DisplayName("verifyUpiPayment: Idempotent guard returns existing confirmed result if already SUCCESS")
+    void verifyUpiPayment_Idempotent() {
+        Payment payment = new Payment(100L, "upi_ord_12345", new BigDecimal("8500.00"), "INR");
+        payment.setStatus(PaymentStatus.SUCCESS);
+        payment.markUpiSuccess("UPI_UTR_ALREADY_VERIFIED");
+        String ref = payment.getPaymentReference();
+
+        BookingResponse confirmedBooking = createMockBooking(100L, BookingStatus.CONFIRMED, new BigDecimal("100.00"));
+        when(paymentRepository.findByPaymentReference(ref)).thenReturn(Optional.of(payment));
+        when(bookingService.getBookingById(100L)).thenReturn(confirmedBooking);
+
+        PaymentVerificationResponse response = paymentService.verifyUpiPayment(
+                new VerifyUpiPaymentRequest(ref, "UPI_UTR_ALREADY_VERIFIED", "Duplicate retry"),
+                1L,
+                false
+        );
+
+        assertThat(response).isNotNull();
+        assertThat(response.bookingConfirmed()).isTrue();
+        assertThat(response.status()).isEqualTo(PaymentStatus.SUCCESS);
+
+        verify(bookingService, never()).confirmBooking(any(), any(), anyBoolean());
     }
 }

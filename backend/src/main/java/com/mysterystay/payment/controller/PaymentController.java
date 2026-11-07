@@ -83,4 +83,49 @@ public class PaymentController {
         PaymentOrderResponse response = paymentService.getPaymentByBookingId(bookingId, principal.getId(), isAdmin);
         return ResponseEntity.ok(ApiResponse.success(response, "Payment details retrieved successfully"));
     }
+
+    /**
+     * Creates a new UPI QR code payment order with dynamic amount, note, and payee VPA.
+     */
+    @PostMapping("/upi/create-order")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<UpiPaymentOrderResponse>> createUpiPaymentOrder(
+            @Valid @RequestBody CreateUpiPaymentOrderRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        UpiPaymentOrderResponse response = paymentService.createUpiPaymentOrder(request, principal.getId());
+        return new ResponseEntity<>(ApiResponse.success(response, "UPI payment QR order initialized"), HttpStatus.CREATED);
+    }
+
+    /**
+     * Verifies UPI payment server-side and confirms booking to reveal secret hotel identity.
+     */
+    @PostMapping("/upi/verify")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<PaymentVerificationResponse>> verifyUpiPayment(
+            @Valid @RequestBody VerifyUpiPaymentRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        boolean isAdmin = principal.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        PaymentVerificationResponse response = paymentService.verifyUpiPayment(request, principal.getId(), isAdmin);
+        return ResponseEntity.ok(ApiResponse.success(response, "UPI payment verified and hotel unlocked"));
+    }
+
+    /**
+     * Checks payment status by payment reference.
+     */
+    @GetMapping("/upi/status/{paymentReference}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<PaymentOrderResponse>> getUpiPaymentStatus(
+            @PathVariable String paymentReference,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        boolean isAdmin = principal.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        PaymentOrderResponse response = paymentService.getPaymentByReference(paymentReference, principal.getId(), isAdmin);
+        return ResponseEntity.ok(ApiResponse.success(response, "UPI payment status retrieved"));
+    }
 }

@@ -38,4 +38,11 @@ app:
     key-secret: ${RAZORPAY_KEY_SECRET:MysteryStaySecretSandbox2026}
     webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:MysteryStayWebhookSecret2026}
     currency: ${RAZORPAY_CURRENCY:USD}
+  upi:
+    vpa: ${UPI_VPA:6302714896@mbk}
+    payee-name: ${UPI_PAYEE_NAME:MysteryStay Prive}
+    currency: ${UPI_CURRENCY:INR}
+    exchange-rate-usd-to-inr: ${UPI_USD_TO_INR:85.00}
+    expiry-minutes: ${UPI_EXPIRY_MINUTES:15}
+
 

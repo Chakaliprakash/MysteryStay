@@ -64,14 +64,19 @@
   - Automated tests (49/49 total project tests passing)
   - Interactive Apple & Big-Tech inspired UI with glassmorphic cards, native modal checkout, and secret identity unlock celebration
 
-- [x] **Phase 8: Payment Integration (Razorpay Sandbox)**
+- [x] **Phase 8: Payment Integration (Razorpay Sandbox & UPI Scan & Pay Gateway)**
   - Flyway migration `V7__payment_schema.sql` (`payments` table with constraints & indexes)
+  - Flyway migration `V8__add_payment_method_and_upi.sql` (added `payment_method`, `upi_vpa`, `upi_transaction_id`)
   - Razorpay sandbox order creation with currency & amount validation (`order_` + 14 chars)
   - Cryptographic verification via HMAC-SHA256 signature calculation using `HexFormat` & timing-resistant comparison (`MessageDigest.isEqual`)
+  - UPI Scan & Pay QR Gateway integrated with dynamic amount encoding, note, and payee VPA (`6302714896@mbk`)
+  - NPCI-standard deep link URI (`upi://pay?pa=...&pn=...&am=...&cu=INR&tn=...&tr=...`) with Google Pay, PhonePe, Paytm, BHIM, and CRED support
+  - Downloadable high-resolution QR code canvas & mobile deep link execution
+  - Server-side UPI verification with 15-minute expiration enforcement and transaction audit trail
   - Strict idempotency guards: duplicate client verifications or webhook events return idempotent success without duplicate processing
   - Webhook processing for asynchronous payment events (`payment.captured`, `payment.failed`)
   - Cross-module transactional hook: transitions booking to `CONFIRMED` and unlocks full hotel identity
-  - Comprehensive unit and integration test coverage (`PaymentServiceTest`, `PaymentControllerTest`, 58/58 total project tests passing)
+  - Comprehensive unit and integration test coverage (`PaymentServiceTest`, `PaymentControllerTest`)
 
 - [x] **Phase 9: Full-Stack Frontend Experience**
   - High-end bespoke luxury design system: Deep Midnight Navy (`#14251F`), Warm Ivory (`#F8F6F0`), and Champagne Gold (`#C6A66B`)

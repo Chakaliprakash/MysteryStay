@@ -1,10 +1,6 @@
 package com.mysterystay.payment.service;
 
-import com.mysterystay.payment.dto.CreatePaymentOrderRequest;
-import com.mysterystay.payment.dto.PaymentOrderResponse;
-import com.mysterystay.payment.dto.PaymentVerificationResponse;
-import com.mysterystay.payment.dto.RazorpayWebhookPayload;
-import com.mysterystay.payment.dto.VerifyPaymentRequest;
+import com.mysterystay.payment.dto.*;
 
 public interface PaymentService {
 
@@ -15,4 +11,10 @@ public interface PaymentService {
     PaymentVerificationResponse handleWebhook(RazorpayWebhookPayload payload, String signatureHeader);
 
     PaymentOrderResponse getPaymentByBookingId(Long bookingId, Long userId, boolean isAdmin);
+
+    UpiPaymentOrderResponse createUpiPaymentOrder(CreateUpiPaymentOrderRequest request, Long userId);
+
+    PaymentVerificationResponse verifyUpiPayment(VerifyUpiPaymentRequest request, Long userId, boolean isAdmin);
+
+    PaymentOrderResponse getPaymentByReference(String paymentReference, Long userId, boolean isAdmin);
 }

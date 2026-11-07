@@ -158,7 +158,52 @@
 - **Idempotency Guard**: Duplicate calls return existing success record without re-running transitions.
 - **Cross-Module Hook**: Transitions booking to `CONFIRMED` and returns unmasked hotel name, street address, and VIP concierge phone!
 
-### 7.3 Razorpay Webhook
+### 7.3 Create UPI QR Payment Order
+- **Endpoint**: `POST /payments/upi/create-order`
+- **Access**: Authenticated
+- **Request Body**: `{"bookingId": 101}`
+- **Response**:
+  ```json
+  {
+    "paymentReference": "PAY-UPI-1234-ABCD",
+    "bookingId": 101,
+    "bookingReference": "BK-MS-849201",
+    "upiId": "6302714896@mbk",
+    "payeeName": "MysteryStay Prive",
+    "amountInInr": 12665.00,
+    "currency": "INR",
+    "originalAmount": 149.00,
+    "originalCurrency": "USD",
+    "upiUri": "upi://pay?pa=6302714896@mbk&pn=MysteryStay%20Prive&am=12665.00&cu=INR&tn=MysteryStay%20BK-MS-849201&tr=PAY-UPI-1234-ABCD",
+    "status": "PENDING",
+    "expiresAt": "2026-11-07T14:00:00Z",
+    "expirySeconds": 900,
+    "supportedApps": ["Google Pay", "PhonePe", "Paytm", "BHIM", "CRED UPI", "Any UPI App"]
+  }
+  ```
+
+### 7.4 Verify UPI Payment & Reveal Hotel Identity
+- **Endpoint**: `POST /payments/upi/verify`
+- **Access**: Authenticated
+- **Request Body**:
+  ```json
+  {
+    "paymentReference": "PAY-UPI-1234-ABCD",
+    "upiTransactionId": "UPI_UTR_412345678901",
+    "remarks": "Paid via Google Pay"
+  }
+  ```
+- **Server-Side Validation**:
+  - Validates active payment session and 15-minute expiration countdown.
+  - Idempotency guard prevents duplicate callbacks.
+  - Marks payment `SUCCESS` and atomically unlocks confidential hotel identity.
+
+### 7.5 Check UPI Payment Status
+- **Endpoint**: `GET /payments/upi/status/{paymentReference}`
+- **Access**: Authenticated
+- **Response**: Latest payment order state (`PENDING`, `SUCCESS`, `FAILED`, `EXPIRED`).
+
+### 7.6 Razorpay Webhook
 - **Endpoint**: `POST /payments/webhook`
 - **Access**: Public (guarded by webhook secret header)
 - **Events**: Handles `payment.captured` and `payment.failed`.

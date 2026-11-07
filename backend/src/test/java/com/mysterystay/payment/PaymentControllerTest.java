@@ -12,7 +12,9 @@ import com.mysterystay.inventory.model.RoomCategory;
 import com.mysterystay.inventory.model.RoomType;
 import com.mysterystay.inventory.repository.RoomTypeRepository;
 import com.mysterystay.payment.dto.CreatePaymentOrderRequest;
+import com.mysterystay.payment.dto.CreateUpiPaymentOrderRequest;
 import com.mysterystay.payment.dto.VerifyPaymentRequest;
+import com.mysterystay.payment.dto.VerifyUpiPaymentRequest;
 import com.mysterystay.payment.model.Payment;
 import com.mysterystay.payment.repository.PaymentRepository;
 import com.mysterystay.payment.service.PaymentServiceImpl;
@@ -228,5 +230,52 @@ class PaymentControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success", is(false)));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/payments/upi/create-order: Initializes UPI QR session with dynamic amount and UPI URI")
+    void createUpiPaymentOrder_Success() throws Exception {
+        CreateUpiPaymentOrderRequest request = new CreateUpiPaymentOrderRequest(testBooking.getId());
+
+        mockMvc.perform(post("/api/v1/payments/upi/create-order")
+                        .header("Authorization", "Bearer " + travelerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.upiId", is("6302714896@mbk")))
+                .andExpect(jsonPath("$.data.currency", is("INR")))
+                .andExpect(jsonPath("$.data.upiUri").isString())
+                .andExpect(jsonPath("$.data.status", is("PENDING")))
+                .andExpect(jsonPath("$.data.paymentReference").isString());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/payments/upi/verify: Verifies UPI payment and reveals secret hotel identity")
+    void verifyUpiPayment_Success() throws Exception {
+        // First create order
+        CreateUpiPaymentOrderRequest createReq = new CreateUpiPaymentOrderRequest(testBooking.getId());
+        String createRes = mockMvc.perform(post("/api/v1/payments/upi/create-order")
+                        .header("Authorization", "Bearer " + travelerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createReq)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        String paymentRef = objectMapper.readTree(createRes).path("data").path("paymentReference").asText();
+
+        // Verify payment
+        VerifyUpiPaymentRequest verifyReq = new VerifyUpiPaymentRequest(paymentRef, "UPI_UTR_TEST123456", "Paid via PhonePe");
+
+        mockMvc.perform(post("/api/v1/payments/upi/verify")
+                        .header("Authorization", "Bearer " + travelerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(verifyReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.status", is("SUCCESS")))
+                .andExpect(jsonPath("$.data.bookingConfirmed", is(true)))
+                .andExpect(jsonPath("$.data.booking.identityRevealed", is(true)))
+                .andExpect(jsonPath("$.data.booking.hotelName", is("The Grand Azure Palace")));
     }
 }

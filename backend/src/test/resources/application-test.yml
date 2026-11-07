@@ -33,4 +33,11 @@ app:
     key-secret: MysteryStaySecretSandbox2026
     webhook-secret: MysteryStayWebhookSecret2026
     currency: USD
+  upi:
+    vpa: 6302714896@mbk
+    payee-name: MysteryStay Prive
+    currency: INR
+    exchange-rate-usd-to-inr: 85.00
+    expiry-minutes: 15
+
 

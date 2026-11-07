@@ -1,6 +1,9 @@
 # MysteryStay — DSA Implementations & Interview Guide
 
-This document provides formal architectural and algorithmic documentation for all Data Structures and Algorithms implemented across the MysteryStay platform, in compliance with Section 7 of `AGENTS.md`.
+> **Project**: MysteryStay  
+> **Tagline**: Discover Hidden Stays. Unlock Better Deals.  
+> **Founder & Developer**: Prakash Chakali  
+> **Documentation Standard**: Formal algorithm specifications, mathematical proofs, complexity derivations, and interview defense questions.
 
 ---
 
@@ -68,54 +71,65 @@ Result extracted & reversed: `[42.0, 31.5, 28.4]`. Correct Top 3!
 ### Problem Statement
 Travelers filter mystery deals by multiple attributes: city, star rating, and luxury mystery clues (e.g., `INFINITY_POOL`, `SPA`, `ROOFTOP_LOUNGE`). Scanning all rows in SQL using repeated `JOIN` and `LIKE` queries incurs heavy I/O and locks.
 
-### Algorithmic Solution
-Build an in-memory Inverted Index:
-- `cityIndex: Map<String, Set<Long>>` (City $\to$ Set of Deal IDs)
-- `starRatingIndex: Map<Integer, Set<Long>>` (Star Rating $\to$ Set of Deal IDs)
-- `amenityIndex: Map<String, Set<Long>>` (Clue tag $\to$ Set of Deal IDs)
+### Solution: Inverted Index with Set Intersection
+We maintain three in-memory inverted index maps:
+1. `Map<String, Set<Long>> cityIndex` (Maps city $\to$ deal IDs)
+2. `Map<Integer, Set<Long>> starRatingIndex` (Maps star rating $\to$ deal IDs)
+3. `Map<String, Set<Long>> amenityClueIndex` (Maps luxury clue tag $\to$ deal IDs)
 
-#### Set Intersection Optimization
-When querying multiple criteria ($S_1, S_2, \dots, S_m$):
-1. Sort candidate sets by cardinality in ascending order: $|S_1| \le |S_2| \le \dots \le |S_m|$.
-2. Start with the smallest set $S_1$ as the base.
-3. For each remaining set $S_i$, execute `result.retainAll(S_i)`:
-   - If `result` becomes empty at any step, break immediately (**Short-Circuiting**).
+When querying across multiple attributes, we compute the set intersection ordered from the smallest set to the largest:
+```java
+Set<Long> candidateIds = new HashSet<>(smallestSet);
+for (Set<Long> otherSet : criteriaSets) {
+    candidateIds.retainAll(otherSet);
+    if (candidateIds.isEmpty()) break;
+}
+```
 - **Time Complexity**: $O(\min(|S_1|, |S_2|, \dots, |S_m|))$
-- **Space Complexity**: $O(\text{Total deal-attribute postings})$
+- **Space Complexity**: $O(T)$ where $T$ is the total count of term-to-deal postings.
 
 ---
 
-## 3. Consecutive Stay Price-Trend & Best Window Detector (Sliding Window)
+## 3. Consecutive Stay Calendar Price Optimizer (Sliding Window)
 
 ### Problem Statement
-Given a deal valid over a date range of $D$ days with variable daily rates (base rate on weekdays, 15% surcharge on Friday and Saturday nights), find the optimal check-in date for an $L$-night consecutive stay ($1 \le L \le D$) that minimizes total cost.
+A traveler wants to book a consecutive stay of $L$ nights within an eligible date window of $D$ days. Room prices fluctuate daily. The optimizer must find the consecutive stay window with the minimum total cost.
 
 ### Algorithmic Solutions
 
-#### A. Brute Force Solution
-For every possible starting day index $i \in [0, D - L]$, sum $L$ days:
-$$\sum_{j=i}^{i+L-1} \text{rate}[j]$$
-- **Time Complexity**: $O((D - L + 1) \cdot L) \approx O(D \cdot L)$
+#### A. Brute Force
+For each possible start index $i \in [0, D - L]$, sum $L$ days:
+- **Time Complexity**: $O((D - L + 1) \times L) \approx O(D \cdot L)$
 - **Auxiliary Space Complexity**: $O(1)$
 
 #### B. Optimal Solution: Sliding Window
 Compute the initial window sum $S_0 = \sum_{j=0}^{L-1} \text{rate}[j]$ in $O(L)$.
 Slide the window across the remaining $D - L$ days in $O(1)$ per step:
 $$S_i = S_{i-1} - \text{rate}[i - 1] + \text{rate}[i + L - 1]$$
-- **Time Complexity**: $O(D)$
-- **Auxiliary Space Complexity**: $O(1)$
-
-### Dry Run
-Given daily rates $[200, 210, 110, 105, 115, 250]$, $L = 3$:
-1. Initial window $[0 \dots 2]$: $200 + 210 + 110 = 520$. Min = 520, Start = 0.
-2. Step 1 (Day 3): $520 - 200 + 105 = 425$. $425 < 520 \to$ Min = 425, Start = 1.
-3. Step 2 (Day 4): $425 - 210 + 115 = 330$. $330 < 425 \to$ Min = 330, Start = 2 (Dates: Days 2, 3, 4).
-4. Step 3 (Day 5): $330 - 110 + 250 = 470$. $470 > 330 \to$ Ignore.
-Best stay window: Index 2, Total Cost = \$330.00.
+- **Time Complexity**: $O(D)$ linear
+- **Auxiliary Space Complexity**: $O(1)$ constant
 
 ---
 
-## 4. Technical Interview Defense Guide
+## 4. 0/1 Budget Knapsack Deal Optimizer (Dynamic Programming)
+
+### Problem Statement
+A traveler has a hard total budget constraint of $W$ dollars (e.g., \$600.00) and wishes to select the optimal portfolio of multi-night mystery packages that maximizes total monetary discount savings without exceeding $W$.
+
+### Recurrence Relation
+Let $\text{dp}[i][w]$ be the maximum discount savings achievable considering the first $i$ mystery packages with a budget capacity $w$:
+$$\text{dp}[i][w] = \begin{cases} 
+\text{dp}[i-1][w] & \text{if } \text{price}[i] > w \\
+\max\Big(\text{dp}[i-1][w],\; \text{dp}[i-1][w - \text{price}[i]] + \text{savings}[i]\Big) & \text{otherwise}
+\end{cases}$$
+
+- **Time Complexity**: $O(N \cdot W)$ pseudo-polynomial
+- **Space Complexity**: $O(W)$ using 1D rolling array optimization
+- **Interview Defense**: Avoids exponential $O(2^N)$ brute-force subset generation, mathematically guaranteeing global optimality.
+
+---
+
+## 5. Technical Interview Defense Guide
 
 ### Why use an in-memory Bounded Min-Heap instead of a database `ORDER BY ... LIMIT K`?
 1. **Dynamic Real-Time Weighting**: Perceived value scores depend on client-side session context (e.g., guest budget, time of booking, personalization sliders). Materializing or indexing these composite scores inside a relational DB is impractical because weights shift on every request.

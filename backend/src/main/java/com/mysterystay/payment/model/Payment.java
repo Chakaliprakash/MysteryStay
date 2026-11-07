@@ -38,6 +38,15 @@ public class Payment {
     @Column(name = "status", nullable = false, length = 30)
     private PaymentStatus status;
 
+    @Column(name = "payment_method", nullable = false, length = 50)
+    private String paymentMethod = "RAZORPAY";
+
+    @Column(name = "upi_vpa", length = 100)
+    private String upiVpa;
+
+    @Column(name = "upi_transaction_id", length = 100)
+    private String upiTransactionId;
+
     @Column(name = "error_code", length = 100)
     private String errorCode;
 
@@ -90,6 +99,20 @@ public class Payment {
         this.razorpaySignature = razorpaySignature;
         this.errorCode = null;
         this.errorDescription = null;
+    }
+
+    public void markUpiSuccess(String upiTransactionId) {
+        this.status = PaymentStatus.SUCCESS;
+        this.upiTransactionId = upiTransactionId;
+        this.razorpayPaymentId = upiTransactionId;
+        this.errorCode = null;
+        this.errorDescription = null;
+    }
+
+    public void markExpired() {
+        this.status = PaymentStatus.EXPIRED;
+        this.errorCode = "PAYMENT_EXPIRED";
+        this.errorDescription = "Payment QR code session expired";
     }
 
     public void markFailed(String errorCode, String errorDescription) {
@@ -189,5 +212,29 @@ public class Payment {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public String getUpiVpa() {
+        return upiVpa;
+    }
+
+    public void setUpiVpa(String upiVpa) {
+        this.upiVpa = upiVpa;
+    }
+
+    public String getUpiTransactionId() {
+        return upiTransactionId;
+    }
+
+    public void setUpiTransactionId(String upiTransactionId) {
+        this.upiTransactionId = upiTransactionId;
     }
 }
