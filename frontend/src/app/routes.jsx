@@ -9,11 +9,13 @@ import OwnerDashboardPage from '../features/owner/OwnerDashboardPage';
 import AdminDashboardPage from '../features/admin/AdminDashboardPage';
 import DsaLabPage from '../features/dsa/DsaLabPage';
 import AboutPage from '../features/customer/AboutPage';
+import HowItWorksPage from '../features/customer/HowItWorksPage';
 
 export const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/how-it-works" element={<HowItWorksPage />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/search" element={<SearchResultsPage />} />
       <Route path="/deals/:dealId" element={<DealDetailPage />} />

@@ -19,7 +19,6 @@ import {
 import SearchPanel from '../../components/forms/SearchPanel';
 import MysteryDealCard from '../../components/cards/MysteryDealCard';
 import Modal from '../../components/common/Modal';
-import ModelEducatorSection from '../../components/common/ModelEducatorSection';
 import { dealService } from '../../services/dealService';
 import { dsaService } from '../../services/dsaService';
 
@@ -134,10 +133,7 @@ export const LandingPage = () => {
         </div>
       </section>
 
-      {/* 2. NOT JUST ANOTHER HOTEL BOOKING PLATFORM (MODEL EDUCATOR) */}
-      <ModelEducatorSection />
-
-      {/* 3. CATEGORY BAR & CURATED DEALS DISCOVERY */}
+      {/* 2. CATEGORY BAR & CURATED DEALS DISCOVERY */}
       <section className="max-w-7xl mx-auto px-4 sm:px-8 space-y-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-[#E4DFD5]">
           <div>

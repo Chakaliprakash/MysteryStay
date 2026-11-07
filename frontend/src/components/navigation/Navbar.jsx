@@ -9,7 +9,8 @@ import {
   ShieldAlert, 
   Menu, 
   X,
-  Compass
+  Compass,
+  HelpCircle
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -88,6 +89,18 @@ export const Navbar = () => {
 
         {/* Desktop Navigation Links */}
         <nav className="hidden lg:flex items-center gap-1">
+          <Link
+            to="/how-it-works"
+            className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-1.5 ${
+              isActive('/how-it-works')
+                ? 'bg-[#14251F] text-[#F8F6F0]'
+                : 'text-[#14251F] hover:bg-[#EFECE4]'
+            }`}
+          >
+            <HelpCircle className="w-4 h-4 text-[#C6A66B]" />
+            How It Works
+          </Link>
+
           <Link
             to="/search"
             className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-1.5 ${
@@ -200,6 +213,13 @@ export const Navbar = () => {
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="lg:hidden bg-[#F8F6F0] border-b border-[#E4DFD5] px-6 py-4 space-y-2">
+          <Link
+            to="/how-it-works"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block px-3 py-2 rounded-lg text-sm font-medium text-[#14251F] hover:bg-[#EFECE4]"
+          >
+            How It Works
+          </Link>
           <Link
             to="/search"
             onClick={() => setMobileMenuOpen(false)}
