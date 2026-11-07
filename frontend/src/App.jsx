@@ -9,13 +9,10 @@ import {
   createHotel,
   fetchMyHotels,
   fetchAdminHotels,
-  verifyHotelAdmin,
   createRoomType,
   fetchRoomTypesByHotel,
-  seedRoomInventory,
   fetchPublicDeals,
   createMysteryDeal,
-  fetchMyDeals,
   searchMysteryDeals,
   fetchBestStayWindow,
   createBooking,
@@ -35,7 +32,6 @@ import {
   Tag,
   Percent,
   EyeOff,
-  Eye,
   Zap,
   TrendingDown,
   User,
@@ -47,16 +43,22 @@ import {
   RefreshCw,
   LogOut,
   SlidersHorizontal,
-  Layers,
   Compass,
   CreditCard,
-  ArrowRight
+  ArrowRight,
+  Search,
+  Check,
+  ExternalLink,
+  Flame,
+  Award
 } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('deals'); // 'deals' | 'search' | 'bookings' | 'manager' | 'auth'
-  const [health, setHealth] = useState(null);
-  const [healthLoading, setHealthLoading] = useState(false);
+  // Navigation & Category state
+  const [activeSection, setActiveSection] = useState('explore'); // 'explore' | 'deals' | 'dsa' | 'trips' | 'partner' | 'auth'
+  const [selectedCity, setSelectedCity] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
 
   // Authentication state
   const [currentUser, setCurrentUser] = useState(null);
@@ -73,7 +75,6 @@ export default function App() {
   // Deals state
   const [deals, setDeals] = useState([]);
   const [dealsLoading, setDealsLoading] = useState(false);
-  const [selectedCity, setSelectedCity] = useState('All');
 
   // DSA Search state
   const [searchFilters, setSearchFilters] = useState({
@@ -89,7 +90,7 @@ export default function App() {
   const [activeStayWindow, setActiveStayWindow] = useState(null);
   const [stayWindowLoading, setStayWindowLoading] = useState(false);
 
-  // Bookings state
+  // Bookings state (Phase 7)
   const [myBookings, setMyBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [selectedDealForBooking, setSelectedDealForBooking] = useState(null);
@@ -101,17 +102,16 @@ export default function App() {
     guestName: 'Alex Morgan',
     guestEmail: 'customer@mysterystay.com',
     guestPhone: '+919876543210',
-    specialRequests: 'High floor with city skyline view'
+    specialRequests: 'High-floor quiet room with city skyline views'
   });
   const [activeBooking, setActiveBooking] = useState(null);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
   const [countdownSeconds, setCountdownSeconds] = useState(900); // 15 mins
-  const [revealedBooking, setRevealedBooking] = useState(null);
 
-  // Hotel Partner state
-  const [amenitiesList, setAmenitiesList] = useState([]);
+  // Partner portal state
   const [myHotels, setMyHotels] = useState([]);
-  const [adminHotels, setAdminHotels] = useState([]);
+  const [roomTypes, setRoomTypes] = useState([]);
+  const [selectedHotelId, setSelectedHotelId] = useState('');
   const [hotelForm, setHotelForm] = useState({
     name: 'The Grand Azure Palace',
     brandChain: 'Azure Collection',
@@ -124,16 +124,6 @@ export default function App() {
     email: 'reservations@grandazure.com',
     selectedAmenities: [1, 2, 3, 6]
   });
-  const [roomTypes, setRoomTypes] = useState([]);
-  const [selectedHotelId, setSelectedHotelId] = useState('');
-  const [roomTypeForm, setRoomTypeForm] = useState({
-    name: 'Executive Balcony Suite',
-    category: 'EXECUTIVE_SUITE',
-    description: 'Palatial suite featuring a private balcony and Italian marble bath.',
-    maxAdults: 2,
-    maxChildren: 1,
-    basePrice: '380.00'
-  });
   const [dealPublishForm, setDealPublishForm] = useState({
     roomTypeId: '',
     mysteryTitle: '5-Star Waterfront Splendor in Bandra',
@@ -145,13 +135,21 @@ export default function App() {
   const [managerMessage, setManagerMessage] = useState(null);
 
   const bookingDialogRef = useRef(null);
+  const searchContainerRef = useRef(null);
 
   // Initialize
   useEffect(() => {
-    loadHealth();
     loadDeals();
-    loadAmenitiesList();
     checkCurrentUser();
+
+    // Close search dropdown on click outside
+    const handleClickOutside = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setShowSearchDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // 15-minute countdown timer effect
@@ -170,18 +168,6 @@ export default function App() {
     }
     return () => clearInterval(timer);
   }, [activeBooking]);
-
-  const loadHealth = async () => {
-    setHealthLoading(true);
-    try {
-      const res = await checkSystemHealth();
-      setHealth(res.data);
-    } catch {
-      // Ignored
-    } finally {
-      setHealthLoading(false);
-    }
-  };
 
   const checkCurrentUser = async () => {
     try {
@@ -216,15 +202,6 @@ export default function App() {
     }
   };
 
-  const loadAmenitiesList = async () => {
-    try {
-      const res = await fetchAmenities();
-      setAmenitiesList(res.data || []);
-    } catch {
-      // Ignored
-    }
-  };
-
   const loadUserBookings = async () => {
     setBookingsLoading(true);
     try {
@@ -237,6 +214,20 @@ export default function App() {
     }
   };
 
+  const loadPartnerData = async () => {
+    try {
+      const hotelsRes = await fetchMyHotels().catch(() => ({ data: [] }));
+      setMyHotels(hotelsRes.data || []);
+      if (hotelsRes.data && hotelsRes.data.length > 0) {
+        setSelectedHotelId(hotelsRes.data[0].id);
+        const rtRes = await fetchRoomTypesByHotel(hotelsRes.data[0].id);
+        setRoomTypes(rtRes.data || []);
+      }
+    } catch {
+      // Ignored
+    }
+  };
+
   const handleLoginRegister = async (e) => {
     e.preventDefault();
     setAuthLoading(true);
@@ -244,7 +235,6 @@ export default function App() {
     try {
       if (authMode === 'register') {
         await registerUser(authForm);
-        setAuthMessage({ type: 'success', text: 'Registration successful! Signing in...' });
       }
       const loginRes = await loginUser({
         email: authForm.email,
@@ -253,15 +243,16 @@ export default function App() {
       localStorage.setItem('mystery_access_token', loginRes.data.accessToken);
       localStorage.setItem('mystery_user', JSON.stringify(loginRes.data.user));
       setCurrentUser(loginRes.data.user);
-      setAuthMessage({ type: 'success', text: `Welcome back, ${loginRes.data.user.fullName}!` });
+      setAuthMessage({ type: 'success', text: `Signed in as ${loginRes.data.user.fullName}` });
       loadUserBookings();
       if (loginRes.data.user.role === 'ROLE_HOTEL_MANAGER' || loginRes.data.user.role === 'ROLE_ADMIN') {
         loadPartnerData();
       }
+      setActiveSection('deals');
     } catch (err) {
       setAuthMessage({
         type: 'error',
-        text: err.response?.data?.message || 'Authentication failed. Please verify credentials.'
+        text: err.response?.data?.message || 'Authentication failed. Please check credentials.'
       });
     } finally {
       setAuthLoading(false);
@@ -274,36 +265,18 @@ export default function App() {
     setMyBookings([]);
     setMyHotels([]);
     setActiveBooking(null);
-    setRevealedBooking(null);
-    setAuthMessage({ type: 'info', text: 'Logged out successfully.' });
-  };
-
-  const loadPartnerData = async () => {
-    try {
-      const [hotelsRes, adminRes] = await Promise.all([
-        fetchMyHotels().catch(() => ({ data: [] })),
-        fetchAdminHotels().catch(() => ({ data: [] }))
-      ]);
-      setMyHotels(hotelsRes.data || []);
-      setAdminHotels(adminRes.data || []);
-      if (hotelsRes.data && hotelsRes.data.length > 0) {
-        setSelectedHotelId(hotelsRes.data[0].id);
-        const rtRes = await fetchRoomTypesByHotel(hotelsRes.data[0].id);
-        setRoomTypes(rtRes.data || []);
-      }
-    } catch {
-      // Ignored
-    }
+    setActiveSection('explore');
   };
 
   // Run DSA Search
-  const handleRunSearch = async (e) => {
-    if (e) e.preventDefault();
+  const handleRunSearch = async (overrideCity) => {
     setSearchLoading(true);
     setActiveStayWindow(null);
+    setShowSearchDropdown(false);
     try {
       const params = {};
-      if (searchFilters.city) params.city = searchFilters.city;
+      const targetCity = overrideCity !== undefined ? overrideCity : (searchFilters.city || searchQuery);
+      if (targetCity && targetCity !== 'All') params.city = targetCity;
       if (searchFilters.minRating) params.minRating = parseInt(searchFilters.minRating, 10);
       if (searchFilters.maxPrice) params.maxPrice = parseFloat(searchFilters.maxPrice);
       if (searchFilters.k) params.k = parseInt(searchFilters.k, 10);
@@ -314,6 +287,7 @@ export default function App() {
 
       const res = await searchMysteryDeals(params);
       setSearchResult(res.data);
+      setActiveSection('dsa');
     } catch {
       // Ignored
     } finally {
@@ -327,6 +301,7 @@ export default function App() {
     try {
       const res = await fetchBestStayWindow(dealId, stayLength);
       setActiveStayWindow(res.data);
+      setActiveSection('dsa');
     } catch {
       // Ignored
     } finally {
@@ -338,7 +313,6 @@ export default function App() {
   const openBookingModal = (deal) => {
     setSelectedDealForBooking(deal);
     setActiveBooking(null);
-    setRevealedBooking(null);
     setCountdownSeconds(900); // 15 mins
     if (bookingDialogRef.current) {
       bookingDialogRef.current.showModal();
@@ -356,7 +330,7 @@ export default function App() {
   const handleInitiateBooking = async (e) => {
     e.preventDefault();
     if (!currentUser) {
-      setActiveTab('auth');
+      setActiveSection('auth');
       closeBookingModal();
       return;
     }
@@ -391,10 +365,9 @@ export default function App() {
     try {
       const res = await confirmBooking(bookingId);
       setActiveBooking(res.data);
-      setRevealedBooking(res.data);
       loadUserBookings();
     } catch (err) {
-      alert(err.response?.data?.message || 'Payment confirmation failed.');
+      alert(err.response?.data?.message || 'Confirmation failed.');
     } finally {
       setBookingSubmitting(false);
     }
@@ -402,7 +375,7 @@ export default function App() {
 
   // Cancel Booking
   const handleCancelBooking = async (bookingId) => {
-    if (!confirm('Are you sure you want to cancel this reservation? Inventory will be released.')) return;
+    if (!confirm('Cancel this reservation? Released rooms are restored to the inventory ledger.')) return;
     try {
       await cancelBooking(bookingId);
       loadUserBookings();
@@ -414,126 +387,442 @@ export default function App() {
     }
   };
 
+  // Filtered deals
   const filteredDeals = selectedCity === 'All'
     ? deals
     : deals.filter((d) => d.city.toLowerCase() === selectedCity.toLowerCase());
 
-  return (
-    <div className="min-h-screen bg-[#030712] text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
-      {/* Glow ambient background aura */}
-      <div className="fixed inset-0 pointer-events-none glow-gradient z-0 opacity-80" />
+  // Search recommendations suggestions
+  const citySuggestions = ['Bangalore', 'Mumbai', 'Goa', 'Delhi'];
+  const clueSuggestions = ['Rooftop Infinity Pool', 'Luxury Wellness Spa', 'Private Beachfront Villa', 'Fine Dining Restaurant'];
 
-      {/* Floating Apple-Style Navigation Bar */}
-      <header className="sticky top-0 z-40 w-full border-b border-white/10 glass-panel">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          {/* Brand Logo */}
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('deals')}>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-amber-400 p-[1px] shadow-lg shadow-indigo-500/20">
-              <div className="w-full h-full bg-slate-950 rounded-[11px] flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-amber-300" />
+  return (
+    <div className="min-h-screen bg-[#000000] text-[#f5f5f7] flex flex-col font-sans selection:bg-[#0071e3] selection:text-white">
+      {/* ========================================================================= */}
+      {/* 1. APPLE FLAGSHIP NAVIGATION BAR (https://www.apple.com/in/ design) */}
+      {/* ========================================================================= */}
+      <header className="sticky top-0 z-50 w-full bg-[rgba(22,22,23,0.8)] backdrop-blur-2xl border-b border-[rgba(255,255,255,0.08)]">
+        <div className="max-w-[1024px] mx-auto px-4 h-12 flex items-center justify-between text-xs tracking-tight">
+          {/* Apple-Style Emblem Logo */}
+          <div
+            onClick={() => setActiveSection('explore')}
+            className="flex items-center space-x-2 cursor-pointer opacity-90 hover:opacity-100 transition"
+          >
+            <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#0071e3] via-[#bf5af2] to-[#ffd60a] flex items-center justify-center p-[1px]">
+              <div className="w-full h-full bg-black rounded-full flex items-center justify-center">
+                <Sparkles className="w-2.5 h-2.5 text-white" />
               </div>
             </div>
-            <div>
-              <span className="font-extrabold text-base tracking-tight text-white flex items-center gap-1.5">
-                MysteryStay
-                <span className="text-[10px] font-mono uppercase bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/30">
-                  Luxe
-                </span>
-              </span>
-            </div>
+            <span className="font-semibold text-sm tracking-tight text-[#f5f5f7]">MysteryStay</span>
           </div>
 
-          {/* Navigation Tabs */}
-          <nav className="hidden md:flex items-center space-x-1 bg-slate-900/60 p-1 rounded-full border border-white/5">
-            {[
-              { id: 'deals', label: 'Explore Stays', icon: Compass },
-              { id: 'search', label: 'DSA Recommendations', icon: Zap },
-              { id: 'bookings', label: 'My Trips', icon: Calendar },
-              { id: 'manager', label: 'Partner Portal', icon: Building }
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    if (tab.id === 'bookings' && currentUser) loadUserBookings();
-                    if (tab.id === 'manager' && currentUser) loadPartnerData();
-                  }}
-                  className={`flex items-center space-x-2 px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
-                    isActive
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
+          {/* Apple Horizontal Navigation Links */}
+          <nav className="hidden md:flex items-center space-x-7 text-[#ceced2] font-normal text-[12px]">
+            <button
+              onClick={() => setActiveSection('explore')}
+              className={`hover:text-[#f5f5f7] transition ${activeSection === 'explore' ? 'text-white font-medium' : ''}`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveSection('deals')}
+              className={`hover:text-[#f5f5f7] transition ${activeSection === 'deals' ? 'text-white font-medium' : ''}`}
+            >
+              Secret Stays
+            </button>
+            <button
+              onClick={() => setActiveSection('dsa')}
+              className={`hover:text-[#f5f5f7] transition ${activeSection === 'dsa' ? 'text-white font-medium' : ''}`}
+            >
+              Algorithm (DSA)
+            </button>
+            <button
+              onClick={() => {
+                setActiveSection('trips');
+                if (currentUser) loadUserBookings();
+              }}
+              className={`hover:text-[#f5f5f7] transition ${activeSection === 'trips' ? 'text-white font-medium' : ''}`}
+            >
+              My Trips
+            </button>
+            <button
+              onClick={() => {
+                setActiveSection('partner');
+                if (currentUser) loadPartnerData();
+              }}
+              className={`hover:text-[#f5f5f7] transition ${activeSection === 'partner' ? 'text-white font-medium' : ''}`}
+            >
+              Hotel Partners
+            </button>
           </nav>
 
-          {/* User & Health Status Action */}
+          {/* Right Action: User Status / Apple Sign In Button */}
           <div className="flex items-center space-x-3">
             {currentUser ? (
-              <div className="flex items-center space-x-2.5 bg-slate-900/80 px-3.5 py-1.5 rounded-full border border-white/10 text-xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="font-medium text-slate-300 max-w-[120px] truncate">{currentUser.fullName}</span>
-                <span className="text-[10px] font-mono text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full">
-                  {currentUser.role === 'ROLE_HOTEL_MANAGER' ? 'Manager' : currentUser.role === 'ROLE_ADMIN' ? 'Admin' : 'Traveler'}
-                </span>
-                <button onClick={handleLogout} className="text-slate-400 hover:text-rose-400 ml-1" title="Sign Out">
-                  <LogOut className="w-3.5 h-3.5" />
+              <div className="flex items-center space-x-2 bg-[#1d1d1f] px-3 py-1 rounded-full border border-white/10 text-[11px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#30d158] animate-pulse" />
+                <span className="text-[#ceced2] font-medium">{currentUser.fullName.split(' ')[0]}</span>
+                <button onClick={handleLogout} className="text-[#86868b] hover:text-[#ff453a] ml-1" title="Sign Out">
+                  <LogOut className="w-3 h-3" />
                 </button>
               </div>
             ) : (
               <button
-                onClick={() => setActiveTab('auth')}
-                className="inline-flex items-center space-x-2 text-xs font-semibold px-4 py-2 rounded-full bg-white text-slate-950 hover:bg-slate-200 transition shadow-lg shadow-white/10"
+                onClick={() => setActiveSection('auth')}
+                className="px-3.5 py-1 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-[11px] font-medium transition shadow-sm"
               >
-                <User className="w-3.5 h-3.5" />
-                <span>Sign In</span>
+                Sign In
               </button>
             )}
           </div>
         </div>
       </header>
 
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-6 py-10 flex-1 w-full space-y-12 z-10">
-        {/* ========================================================================= */}
-        {/* TAB 1: EXPLORE MYSTERY DEALS */}
-        {/* ========================================================================= */}
-        {activeTab === 'deals' && (
-          <div className="space-y-10 animate-in fade-in duration-300">
-            {/* Apple Keynote Style Hero */}
-            <div className="text-center max-w-3xl mx-auto pt-6 pb-2 space-y-4">
-              <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold">
-                <EyeOff className="w-3.5 h-3.5 text-amber-400" />
-                <span>The Art of Anonymous Luxury • 20% to 70% Off Perishable Inventory</span>
+      {/* ========================================================================= */}
+      {/* 2. APPLE SPOTLIGHT SEARCH WITH RECOMMENDATIONS & SUGGESTIONS */}
+      {/* ========================================================================= */}
+      <section className="bg-[#161617] border-b border-white/[0.06] py-3.5 sticky top-12 z-40 backdrop-blur-xl">
+        <div className="max-w-[1024px] mx-auto px-4">
+          <div ref={searchContainerRef} className="relative max-w-xl mx-auto">
+            <div className="relative flex items-center">
+              <Search className="w-4 h-4 text-[#86868b] absolute left-3.5 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onFocus={() => setShowSearchDropdown(true)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSearchDropdown(true);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleRunSearch();
+                }}
+                placeholder="Search by city, luxury amenity, or hotel clue (e.g. Bangalore, Infinity Pool)..."
+                className="w-full bg-[#1c1c1e] text-[#f5f5f7] placeholder-[#86868b] rounded-full pl-10 pr-24 py-2 text-xs border border-white/[0.08] focus:outline-none focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3] transition shadow-inner"
+              />
+              <button
+                onClick={() => handleRunSearch()}
+                className="absolute right-1.5 px-3 py-1 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-[11px] font-medium transition"
+              >
+                Search
+              </button>
+            </div>
+
+            {/* Apple Autocomplete Dropdown Recommendations & Suggestions */}
+            {showSearchDropdown && (
+              <div className="absolute top-11 left-0 right-0 bg-[#1c1c1e] border border-white/[0.12] rounded-2xl shadow-2xl overflow-hidden z-50 p-3 space-y-3 text-xs animate-in fade-in zoom-in-95">
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-[#86868b] px-2 block mb-1.5">
+                    Popular Destinations
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {citySuggestions.map((city) => (
+                      <button
+                        key={city}
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery(city);
+                          setSelectedCity(city);
+                          handleRunSearch(city);
+                        }}
+                        className="px-3 py-1 rounded-full bg-[#2c2c2e] hover:bg-[#3a3a3c] text-[#f5f5f7] text-[11px] font-medium transition flex items-center gap-1"
+                      >
+                        <MapPin className="w-3 h-3 text-[#0071e3]" />
+                        {city}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-t border-white/[0.06] pt-2.5">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-[#86868b] px-2 block mb-1.5">
+                    Trending Luxury Clues (Inverted Index)
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {clueSuggestions.map((clue) => (
+                      <button
+                        key={clue}
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery(clue);
+                          setSearchFilters((prev) => ({
+                            ...prev,
+                            amenities: [clue]
+                          }));
+                          handleRunSearch();
+                        }}
+                        className="px-3 py-1 rounded-full bg-[#2c2c2e] hover:bg-[#3a3a3c] text-[#ffd60a] text-[11px] font-medium transition flex items-center gap-1"
+                      >
+                        <Sparkles className="w-3 h-3 text-[#ffd60a]" />
+                        {clue}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Live Autocomplete Matching Deals */}
+                {searchQuery.trim().length > 0 && (
+                  <div className="border-t border-white/[0.06] pt-2.5">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[#86868b] px-2 block mb-1.5">
+                      Matching Mystery Drops
+                    </span>
+                    <div className="space-y-1">
+                      {deals
+                        .filter(
+                          (d) =>
+                            d.mysteryTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            d.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            d.zoneArea.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (d.amenityClues &&
+                              d.amenityClues.some((a) => a.toLowerCase().includes(searchQuery.toLowerCase())))
+                        )
+                        .slice(0, 3)
+                        .map((matched) => (
+                          <div
+                            key={matched.dealId}
+                            onClick={() => {
+                              setShowSearchDropdown(false);
+                              openBookingModal(matched);
+                            }}
+                            className="p-2 rounded-xl hover:bg-[#2c2c2e] cursor-pointer flex items-center justify-between transition text-xs group"
+                          >
+                            <div className="truncate pr-3">
+                              <div className="text-white font-medium truncate group-hover:text-[#2997ff] transition-colors">
+                                {matched.mysteryTitle}
+                              </div>
+                              <div className="text-[10px] text-[#86868b]">
+                                {matched.zoneArea}, {matched.city} • {matched.roomCategory}
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <div className="text-[#30d158] font-mono font-bold">${matched.mysteryPrice.toFixed(2)}</div>
+                              <div className="text-[10px] text-[#ffd60a] font-medium">{matched.discountPercent}% OFF</div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight">
-                Unsold Luxury.{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-300 to-amber-300">
-                  Unrivaled Pricing.
-                </span>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 3. MAIN UNIFIED VIEWPORT */}
+      {/* ========================================================================= */}
+      <main className="flex-1 max-w-[1024px] mx-auto px-4 py-8 w-full space-y-16">
+        {/* ========================================================================= */}
+        {/* VIEW 1: APPLE BILLBOARD OVERVIEW (LANDING PAGE) */}
+        {/* ========================================================================= */}
+        {activeSection === 'explore' && (
+          <div className="space-y-16 animate-in fade-in duration-300">
+            {/* Apple Hero Billboard */}
+            <div className="text-center pt-8 pb-4 space-y-4">
+              <span className="text-xs font-semibold tracking-wider uppercase text-[#ffd60a]">
+                Exclusive Luxury • Perishable Room Monetization
+              </span>
+              <h1 className="text-5xl sm:text-7xl font-bold tracking-tight text-[#f5f5f7] leading-none">
+                MysteryStay <span className="bg-gradient-to-r from-[#0071e3] via-[#bf5af2] to-[#ffd60a] bg-clip-text text-transparent">Pro</span>
               </h1>
-              <p className="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto font-normal leading-relaxed">
-                Book verified 5-star hotel suites with complete rate discretion.
-                The secret property identity is revealed exclusively upon confirmed reservation.
+              <p className="text-lg sm:text-2xl text-[#86868b] font-normal max-w-2xl mx-auto leading-relaxed">
+                Unsold 5-star inventory. Identity strictly masked.<br className="hidden sm:inline" />
+                Revealed exclusively upon booking confirmation.
               </p>
 
-              {/* City Pill Selector */}
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-4">
+              <div className="flex items-center justify-center space-x-4 pt-4">
+                <button
+                  onClick={() => setActiveSection('deals')}
+                  className="px-6 py-2.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold transition shadow-lg shadow-[#0071e3]/20"
+                >
+                  Explore Secret Stays
+                </button>
+                <button
+                  onClick={() => setActiveSection('dsa')}
+                  className="text-xs text-[#2997ff] hover:underline flex items-center gap-1 font-medium"
+                >
+                  <span>How the Algorithm Works</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Apple Bento Grid Product Features */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {/* Bento Card 1: Identity Masking (USP) */}
+              <div className="md:col-span-2 bg-[#161617] rounded-[28px] p-8 border border-white/[0.08] flex flex-col justify-between relative overflow-hidden group">
+                <div className="space-y-2">
+                  <div className="w-8 h-8 rounded-full bg-[#bf5af2]/10 flex items-center justify-center text-[#bf5af2]">
+                    <EyeOff className="w-4 h-4" />
+                  </div>
+                  <span className="text-[11px] font-mono uppercase text-[#bf5af2] tracking-wider block">Core Innovation</span>
+                  <h3 className="text-2xl font-bold text-white">Rate Parity Protected.</h3>
+                  <p className="text-xs text-[#86868b] leading-relaxed max-w-md">
+                    Hotels monetize perishable suites at 20% to 70% discounts without cannibalizing public brand rates.
+                    Property names and street addresses remain completely confidential until verified reservation.
+                  </p>
+                </div>
+                <div className="pt-8 flex items-center gap-2 text-xs text-[#2997ff] font-medium">
+                  <span>Browse live masked deals</span>
+                  <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              {/* Bento Card 2: Concurrency & Lock */}
+              <div className="bg-[#161617] rounded-[28px] p-8 border border-white/[0.08] flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="w-8 h-8 rounded-full bg-[#30d158]/10 flex items-center justify-center text-[#30d158]">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <span className="text-[11px] font-mono uppercase text-[#30d158] tracking-wider block">Pessimistic Locking</span>
+                  <h3 className="text-xl font-bold text-white">Zero Double Booking.</h3>
+                  <p className="text-xs text-[#86868b] leading-relaxed">
+                    Powered by row-level database locks preventing race conditions across multi-night stays.
+                  </p>
+                </div>
+                <span className="text-[11px] font-mono text-[#86868b]">10 Simultaneous Threads Tested</span>
+              </div>
+
+              {/* Bento Card 3: Min-Heap Top-K */}
+              <div className="bg-[#161617] rounded-[28px] p-8 border border-white/[0.08] flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="w-8 h-8 rounded-full bg-[#ffd60a]/10 flex items-center justify-center text-[#ffd60a]">
+                    <Zap className="w-4 h-4" />
+                  </div>
+                  <span className="text-[11px] font-mono uppercase text-[#ffd60a] tracking-wider block">Bounded Min-Heap</span>
+                  <h3 className="text-xl font-bold text-white">O(N log K) Ranker.</h3>
+                  <p className="text-xs text-[#86868b] leading-relaxed">
+                    Surfaces top-K luxury values in &lt;200 µs without sorting large datasets.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveSection('dsa')}
+                  className="text-xs text-[#2997ff] hover:underline flex items-center gap-1 font-medium pt-4"
+                >
+                  <span>Inspect benchmark</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Bento Card 4: Sliding Window */}
+              <div className="md:col-span-2 bg-[#161617] rounded-[28px] p-8 border border-white/[0.08] flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="w-8 h-8 rounded-full bg-[#0071e3]/10 flex items-center justify-center text-[#0071e3]">
+                    <TrendingDown className="w-4 h-4" />
+                  </div>
+                  <span className="text-[11px] font-mono uppercase text-[#0071e3] tracking-wider block">Sliding Window O(D)</span>
+                  <h3 className="text-2xl font-bold text-white">Cheapest Stay Window Optimizer.</h3>
+                  <p className="text-xs text-[#86868b] leading-relaxed max-w-lg">
+                    Computes the lowest consecutive stay cost in linear time by shifting rolling sums, detecting weekend rate drops automatically.
+                  </p>
+                </div>
+                <div className="pt-6">
+                  <button
+                    onClick={() => setActiveSection('deals')}
+                    className="px-4 py-2 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#f5f5f7] text-xs font-semibold border border-white/10 transition"
+                  >
+                    Try on Live Stays
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Apple Featured Mystery Drops (Unified Landing Page Showcase) */}
+            <div className="space-y-6 pt-4">
+              <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-[#ffd60a] block">
+                    Curated Spotlight
+                  </span>
+                  <h2 className="text-2xl font-bold text-white tracking-tight">Today's Featured Drops</h2>
+                </div>
+                <button
+                  onClick={() => setActiveSection('deals')}
+                  className="text-xs text-[#2997ff] hover:underline flex items-center gap-1 font-medium"
+                >
+                  <span>View All Secret Stays ({deals.length})</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {deals.slice(0, 2).map((deal) => (
+                  <div
+                    key={deal.dealId}
+                    className="bg-[#161617] rounded-[24px] p-6 border border-white/[0.08] hover:border-white/20 transition-all duration-300 flex flex-col justify-between group shadow-xl"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-3 text-xs">
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#1c1c1e] text-[#86868b] font-medium border border-white/5 flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-[#0071e3]" />
+                          {deal.zoneArea}, {deal.city}
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#ffd60a]/15 text-[#ffd60a] font-bold flex items-center gap-1">
+                          <Percent className="w-3 h-3" />
+                          {deal.discountPercent}% OFF
+                        </span>
+                      </div>
+                      <div className="text-[11px] font-mono text-[#bf5af2] mb-1">
+                        {deal.roomCategory} • {deal.starRating}-Star Luxury
+                      </div>
+                      <h3 className="text-lg font-bold text-white group-hover:text-[#2997ff] transition-colors mb-2">
+                        {deal.mysteryTitle}
+                      </h3>
+                      <p className="text-xs text-[#86868b] leading-relaxed mb-4">
+                        {deal.descriptionClues}
+                      </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-white/[0.08] flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-[#86868b] line-through block font-mono">
+                          ${deal.originalPrice.toFixed(2)} retail
+                        </span>
+                        <div className="text-xl font-bold text-[#30d158] font-mono">
+                          ${deal.mysteryPrice.toFixed(2)}
+                          <span className="text-xs text-[#86868b] font-normal"> / night</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => openBookingModal(deal)}
+                        className="px-5 py-2 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold transition shadow-md active:scale-95 flex items-center gap-1.5"
+                      >
+                        <span>Reserve</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* VIEW 2: CURATED SECRET DEALS (APPLE PRODUCT CARD GRID) */}
+        {/* ========================================================================= */}
+        {activeSection === 'deals' && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            {/* Destination Pill Filter */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Curated Secret Stays</h2>
+                <p className="text-xs text-[#86868b] mt-0.5">
+                  Verified 5-star suites with identity protection. Identity unlocked upon booking.
+                </p>
+              </div>
+
+              {/* Destination Filter Tabs */}
+              <div className="flex items-center space-x-1.5 bg-[#161617] p-1 rounded-full border border-white/[0.08]">
                 {['All', 'Bangalore', 'Mumbai', 'Goa', 'Delhi'].map((city) => (
                   <button
                     key={city}
                     onClick={() => setSelectedCity(city)}
-                    className={`px-4 py-2 rounded-full text-xs font-semibold transition-all ${
+                    className={`px-3.5 py-1 rounded-full text-xs font-medium transition ${
                       selectedCity === city
-                        ? 'bg-white text-slate-950 shadow-md scale-105'
-                        : 'bg-slate-900/80 text-slate-400 border border-white/5 hover:border-white/20 hover:text-white'
+                        ? 'bg-[#0071e3] text-white shadow'
+                        : 'text-[#86868b] hover:text-[#f5f5f7]'
                     }`}
                   >
                     {city}
@@ -542,189 +831,138 @@ export default function App() {
               </div>
             </div>
 
-            {/* Mystery Deals Grid */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                    Verified Secret Stays
-                    <span className="text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
-                      {filteredDeals.length} Available
-                    </span>
-                  </h3>
-                  <p className="text-xs text-slate-400">Strictly identity-masked to protect retail hotel rate parity.</p>
-                </div>
-                <button
-                  onClick={loadDeals}
-                  disabled={dealsLoading}
-                  className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium"
+            {/* Product Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {filteredDeals.map((deal) => (
+                <div
+                  key={deal.dealId}
+                  className="bg-[#161617] rounded-[24px] p-6 border border-white/[0.08] hover:border-white/[0.2] transition-all duration-300 flex flex-col justify-between group shadow-xl"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${dealsLoading ? 'animate-spin' : ''}`} />
-                  <span>Refresh Grid</span>
-                </button>
-              </div>
+                  {/* Card Header & Badges */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3 text-xs">
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#1c1c1e] text-[#86868b] font-medium border border-white/5 flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-[#0071e3]" />
+                        {deal.zoneArea}, {deal.city}
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#ffd60a]/15 text-[#ffd60a] font-bold flex items-center gap-1">
+                        <Percent className="w-3 h-3" />
+                        {deal.discountPercent}% OFF
+                      </span>
+                    </div>
 
-              {filteredDeals.length === 0 ? (
-                <div className="p-16 text-center text-sm text-slate-500 glass-card rounded-3xl border border-white/5">
-                  No deals listed for this destination yet. Switch to "All" or publish a deal from the Partner Portal.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
-                  {filteredDeals.map((deal) => (
-                    <div
-                      key={deal.dealId}
-                      className="glass-card rounded-3xl p-7 flex flex-col justify-between relative overflow-hidden transition-all duration-300 group hover:-translate-y-1"
-                    >
-                      {/* Top Badges */}
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center space-x-2 text-xs">
-                          <span className="px-3 py-1 rounded-full bg-slate-800 text-slate-300 border border-white/10 font-medium flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-indigo-400" />
-                            {deal.zoneArea}, {deal.city}
-                          </span>
-                          <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 font-bold flex items-center gap-1">
-                            <Star className="w-3 h-3 fill-current" />
-                            {deal.starRating}-Star Luxury
-                          </span>
-                        </div>
-                        <div className="px-3 py-1 rounded-full bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-black tracking-wide flex items-center gap-1">
-                          <Percent className="w-3.5 h-3.5" />
-                          <span>{deal.discountPercent}% OFF</span>
-                        </div>
-                      </div>
+                    <div className="text-[11px] font-mono text-[#bf5af2] mb-1">
+                      {deal.roomCategory} • {deal.starRating}-Star Luxury
+                    </div>
+                    <h3 className="text-lg font-bold text-white group-hover:text-[#2997ff] transition-colors mb-2">
+                      {deal.mysteryTitle}
+                    </h3>
+                    <p className="text-xs text-[#86868b] leading-relaxed mb-4">
+                      {deal.descriptionClues}
+                    </p>
 
-                      {/* Deal Content */}
-                      <div className="space-y-3 mb-6">
-                        <div className="inline-flex items-center space-x-1.5 text-[11px] font-mono text-indigo-400 bg-indigo-950/40 px-2.5 py-1 rounded-lg">
-                          <EyeOff className="w-3 h-3" />
-                          <span>{deal.roomCategory} • {deal.maxAdults} Adults</span>
-                        </div>
-                        <h4 className="text-xl font-extrabold text-white group-hover:text-indigo-300 transition-colors">
-                          {deal.mysteryTitle}
-                        </h4>
-                        <p className="text-xs text-slate-400 leading-relaxed font-normal">
-                          {deal.descriptionClues}
-                        </p>
-
-                        {/* Clue Amenities */}
-                        {deal.amenityClues && deal.amenityClues.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 pt-2">
-                            {deal.amenityClues.map((clue, idx) => (
-                              <span
-                                key={idx}
-                                className="text-[10px] bg-white/5 text-slate-300 px-2.5 py-1 rounded-lg border border-white/5 font-medium"
-                              >
-                                {clue}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Pricing & Reservation Footer */}
-                      <div className="pt-5 border-t border-white/10 flex items-center justify-between">
-                        <div>
-                          <div className="text-xs text-slate-500 line-through font-mono">
-                            ${deal.originalPrice.toFixed(2)}/night
-                          </div>
-                          <div className="text-2xl font-black text-emerald-400 tracking-tight">
-                            ${deal.mysteryPrice.toFixed(2)}
-                            <span className="text-xs font-normal text-slate-400"> / night</span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => handleCalculateBestWindow(deal.dealId, 3)}
-                            className="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10 text-xs font-semibold transition"
-                            title="Find cheapest 3 consecutive nights using Sliding Window"
+                    {/* Amenity Clue Chips */}
+                    {deal.amenityClues && deal.amenityClues.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-6">
+                        {deal.amenityClues.map((clue, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[10px] bg-[#1c1c1e] text-[#ceced2] px-2 py-0.5 rounded-md border border-white/5"
                           >
-                            <TrendingDown className="w-4 h-4 text-emerald-400" />
-                          </button>
-                          <button
-                            onClick={() => openBookingModal(deal)}
-                            className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold transition shadow-lg shadow-indigo-500/25 active:scale-95"
-                          >
-                            <span>Book Mystery Stay</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                            {clue}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Pricing Ledger & Action */}
+                  <div className="pt-4 border-t border-white/[0.08] flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-[#86868b] line-through block font-mono">
+                        ${deal.originalPrice.toFixed(2)} retail
+                      </span>
+                      <div className="text-xl font-bold text-[#30d158] font-mono">
+                        ${deal.mysteryPrice.toFixed(2)}
+                        <span className="text-xs text-[#86868b] font-normal"> / night</span>
                       </div>
                     </div>
-                  ))}
+
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleCalculateBestWindow(deal.dealId, 3)}
+                        className="p-2 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#86868b] hover:text-[#30d158] border border-white/10 transition"
+                        title="Calculate optimal 3-night consecutive stay window"
+                      >
+                        <TrendingDown className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => openBookingModal(deal)}
+                        className="px-4 py-2 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold transition shadow-md active:scale-95 flex items-center gap-1.5"
+                      >
+                        <span>Reserve</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 2: DSA RECOMMENDATION & STAY WINDOW OPTIMIZER (PHASE 6) */}
+        {/* VIEW 3: DSA RECOMMENDATION ENGINE (ALGORITHMIC PLAYGROUND) */}
         {/* ========================================================================= */}
-        {activeTab === 'search' && (
+        {activeSection === 'dsa' && (
           <div className="space-y-8 animate-in fade-in duration-300">
-            {/* Header */}
-            <div className="border-b border-white/10 pb-6">
-              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold mb-3">
-                <Zap className="w-3.5 h-3.5 text-amber-300" />
-                <span>Big Tech Algorithmic Engine • PriorityQueue & Sliding Window</span>
-              </div>
-              <h2 className="text-3xl font-extrabold text-white">DSA-Powered Search & Recommendations</h2>
-              <p className="text-slate-400 text-sm mt-1">
-                Sub-millisecond set intersection across in-memory inverted indices and bounded Min-Heap value ranking.
+            <div className="border-b border-white/[0.08] pb-6">
+              <span className="text-xs font-semibold uppercase text-[#ffd60a] block mb-1">
+                Data Structures & Algorithms
+              </span>
+              <h2 className="text-3xl font-bold text-white">Algorithmic Recommendation Engine</h2>
+              <p className="text-xs text-[#86868b] mt-1 max-w-xl">
+                Demonstrating bounded Min-Heap rankers (PriorityQueue), multi-attribute inverted index intersections, and sliding window price optimizers.
               </p>
             </div>
 
-            {/* Filter Hub */}
-            <div className="glass-panel rounded-3xl p-6 space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Filter Controls */}
+            <div className="bg-[#161617] rounded-[24px] p-6 border border-white/[0.08] space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Destination City</label>
+                  <label className="block text-[11px] font-semibold text-[#86868b] mb-1.5">Destination City</label>
                   <input
                     type="text"
                     value={searchFilters.city}
                     onChange={(e) => setSearchFilters({ ...searchFilters, city: e.target.value })}
                     placeholder="e.g. Bangalore, Mumbai, Goa"
-                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-[#1c1c1e] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0071e3]"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Minimum Star Rating</label>
+                  <label className="block text-[11px] font-semibold text-[#86868b] mb-1.5">Min Star Tier</label>
                   <select
                     value={searchFilters.minRating}
                     onChange={(e) => setSearchFilters({ ...searchFilters, minRating: e.target.value })}
-                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-[#1c1c1e] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0071e3]"
                   >
                     <option value="">Any Star Rating</option>
                     <option value="4">4★ & Above</option>
-                    <option value="5">5★ Luxury Exclusive</option>
+                    <option value="5">5★ Luxury Only</option>
                   </select>
                 </div>
-
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Max Nightly Rate ($)</label>
-                  <input
-                    type="number"
-                    value={searchFilters.maxPrice}
-                    onChange={(e) => setSearchFilters({ ...searchFilters, maxPrice: e.target.value })}
-                    placeholder="e.g. 300"
-                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Top-K Heap Capacity</label>
+                  <label className="block text-[11px] font-semibold text-[#86868b] mb-1.5">Top-K Heap Sizing</label>
                   <div className="grid grid-cols-3 gap-2">
                     {[3, 5, 10].map((k) => (
                       <button
                         key={k}
                         type="button"
                         onClick={() => setSearchFilters({ ...searchFilters, k })}
-                        className={`py-2 text-xs font-bold rounded-xl border transition ${
+                        className={`py-2 text-xs font-semibold rounded-xl border transition ${
                           searchFilters.k === k
-                            ? 'bg-indigo-600 border-indigo-500 text-white shadow-md'
-                            : 'bg-slate-900 border-white/5 text-slate-400 hover:text-white'
+                            ? 'bg-[#0071e3] border-[#0071e3] text-white'
+                            : 'bg-[#1c1c1e] border-white/5 text-[#86868b] hover:text-white'
                         }`}
                       >
                         Top {k}
@@ -734,10 +972,10 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Amenity Inverted Index Tags */}
+              {/* Amenity Chips */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-2">
-                  Inverted Index Amenity Clues (Optimal Set Intersection)
+                <label className="block text-[11px] font-semibold text-[#86868b] mb-2">
+                  Inverted Index Clues (Set Intersection)
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {[
@@ -745,10 +983,9 @@ export default function App() {
                     'Luxury Wellness Spa',
                     'Fine Dining Restaurant',
                     'Cocktail Lounge & Bar',
-                    'Free High-Speed WiFi',
-                    'Airport Shuttle Service'
+                    'Free High-Speed WiFi'
                   ].map((amenity) => {
-                    const selected = searchFilters.amenities.includes(amenity);
+                    const isSelected = searchFilters.amenities.includes(amenity);
                     return (
                       <button
                         key={amenity}
@@ -756,18 +993,18 @@ export default function App() {
                         onClick={() => {
                           setSearchFilters((prev) => ({
                             ...prev,
-                            amenities: selected
+                            amenities: isSelected
                               ? prev.amenities.filter((a) => a !== amenity)
                               : [...prev.amenities, amenity]
                           }));
                         }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
-                          selected
-                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm'
-                            : 'bg-slate-900 text-slate-400 border-white/5 hover:border-white/20'
+                        className={`px-3 py-1 rounded-full text-xs transition border ${
+                          isSelected
+                            ? 'bg-[#ffd60a]/20 text-[#ffd60a] border-[#ffd60a]/40 font-semibold'
+                            : 'bg-[#1c1c1e] text-[#86868b] border-white/5 hover:border-white/20'
                         }`}
                       >
-                        {selected ? '✓ ' : '+ '}
+                        {isSelected ? '✓ ' : '+ '}
                         {amenity}
                       </button>
                     );
@@ -775,104 +1012,94 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Action Trigger */}
-              <div className="pt-2 flex justify-end">
+              <div className="flex justify-end">
                 <button
-                  onClick={handleRunSearch}
+                  onClick={() => handleRunSearch()}
                   disabled={searchLoading}
-                  className="inline-flex items-center space-x-2 text-xs font-bold px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/30 transition disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-md"
                 >
-                  <Zap className={`w-4 h-4 ${searchLoading ? 'animate-spin' : ''}`} />
-                  <span>{searchLoading ? 'Executing Min-Heap...' : 'Run DSA Recommendation'}</span>
+                  <Zap className={`w-3.5 h-3.5 ${searchLoading ? 'animate-spin' : ''}`} />
+                  <span>{searchLoading ? 'Ranking...' : 'Execute Min-Heap Ranker'}</span>
                 </button>
               </div>
             </div>
 
-            {/* Live Algorithmic Telemetry */}
+            {/* Performance Telemetry */}
             {searchResult && (
-              <div className="glass-card rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-3 border border-indigo-500/20">
-                <div className="flex items-center space-x-2 text-indigo-300 font-semibold">
-                  <Zap className="w-4 h-4 text-amber-400" />
-                  <span>{searchResult.algorithmUsed}</span>
+              <div className="bg-[#161617] rounded-2xl p-4 border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-3">
+                <div className="flex items-center space-x-2 text-[#2997ff]">
+                  <Zap className="w-4 h-4 text-[#ffd60a]" />
+                  <span className="font-semibold">{searchResult.algorithmUsed}</span>
                 </div>
-                <div className="flex items-center space-x-4 text-slate-400 font-mono text-xs">
+                <div className="flex items-center space-x-4 text-[#86868b] font-mono text-xs">
                   <span>Evaluated: <strong className="text-white">{searchResult.totalCandidatesEvaluated}</strong></span>
                   <span>•</span>
-                  <span>Top-K: <strong className="text-emerald-400">{searchResult.returnedCount}</strong></span>
+                  <span>Returned: <strong className="text-[#30d158]">{searchResult.returnedCount}</strong></span>
                   <span>•</span>
-                  <span>Latency: <strong className="text-amber-400">{searchResult.executionTimeMicros} µs</strong></span>
+                  <span>Latency: <strong className="text-[#ffd60a]">{searchResult.executionTimeMicros} µs</strong></span>
                 </div>
               </div>
             )}
 
-            {/* Sliding Window Result Output */}
+            {/* Sliding Window Optimization Card */}
             {activeStayWindow && (
-              <div className="glass-panel border-emerald-500/30 rounded-3xl p-6 space-y-4 animate-in fade-in">
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                  <div className="flex items-center space-x-2 text-emerald-400 font-bold text-sm">
-                    <TrendingDown className="w-5 h-5" />
+              <div className="bg-[#161617] border border-[#30d158]/30 rounded-[24px] p-6 space-y-3 animate-in fade-in">
+                <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                  <div className="flex items-center space-x-2 text-[#30d158] font-bold text-sm">
+                    <TrendingDown className="w-4 h-4" />
                     <span>Sliding Window: Optimal {activeStayWindow.stayLength}-Night Stay Window</span>
                   </div>
-                  <span className="text-xs font-mono text-emerald-300">
+                  <span className="text-xs font-mono text-[#86868b]">
                     {activeStayWindow.algorithmUsed} ({activeStayWindow.executionTimeMicros} µs)
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-                  <div className="bg-slate-900/60 p-3 rounded-xl border border-white/5">
-                    <span className="text-slate-400 block text-[10px]">Optimal Check-In</span>
-                    <strong className="text-white font-mono text-sm">{activeStayWindow.bestCheckInDate}</strong>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs pt-1">
+                  <div>
+                    <span className="text-[#86868b] block text-[10px]">Optimal Check-In</span>
+                    <strong className="text-white font-mono">{activeStayWindow.bestCheckInDate}</strong>
                   </div>
-                  <div className="bg-slate-900/60 p-3 rounded-xl border border-white/5">
-                    <span className="text-slate-400 block text-[10px]">Optimal Check-Out</span>
-                    <strong className="text-white font-mono text-sm">{activeStayWindow.bestCheckOutDate}</strong>
+                  <div>
+                    <span className="text-[#86868b] block text-[10px]">Optimal Check-Out</span>
+                    <strong className="text-white font-mono">{activeStayWindow.bestCheckOutDate}</strong>
                   </div>
-                  <div className="bg-slate-900/60 p-3 rounded-xl border border-white/5">
-                    <span className="text-slate-400 block text-[10px]">Total Stay Cost</span>
-                    <strong className="text-emerald-400 text-sm font-black">${activeStayWindow.totalCost.toFixed(2)}</strong>
+                  <div>
+                    <span className="text-[#86868b] block text-[10px]">Total Cost</span>
+                    <strong className="text-[#30d158] text-sm font-mono font-bold">${activeStayWindow.totalCost.toFixed(2)}</strong>
                   </div>
-                  <div className="bg-slate-900/60 p-3 rounded-xl border border-white/5">
-                    <span className="text-slate-400 block text-[10px]">Guest Savings vs Peak</span>
-                    <strong className="text-amber-400 text-sm font-black">+${activeStayWindow.savingsVsWorstWindow.toFixed(2)}</strong>
+                  <div>
+                    <span className="text-[#86868b] block text-[10px]">Savings vs Peak</span>
+                    <strong className="text-[#ffd60a] text-sm font-mono font-bold">+${activeStayWindow.savingsVsWorstWindow.toFixed(2)}</strong>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Ranked Results Grid */}
+            {/* Results Grid */}
             {searchResult && searchResult.deals.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {searchResult.deals.map((scored, idx) => (
-                  <div key={scored.deal.dealId} className="glass-card rounded-3xl p-6 flex flex-col justify-between space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 font-bold">
-                        Rank #{idx + 1} • Score: {scored.valueScore.toFixed(2)}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {searchResult.deals.map((item, idx) => (
+                  <div key={item.deal.dealId} className="bg-[#161617] rounded-[24px] p-6 border border-white/[0.08] space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-mono text-[#0071e3] font-bold">
+                        Rank #{idx + 1} • ValueScore: {item.valueScore.toFixed(2)}
                       </span>
-                      <span className="text-xs font-bold text-amber-400">{scored.deal.discountPercent}% OFF</span>
+                      <span className="text-[#ffd60a] font-bold">{item.deal.discountPercent}% OFF</span>
                     </div>
-
-                    <div>
-                      <div className="text-xs text-slate-400 flex items-center gap-1 mb-1">
-                        <MapPin className="w-3.5 h-3.5 text-indigo-400" />
-                        <span>{scored.deal.zoneArea}, {scored.deal.city}</span>
-                      </div>
-                      <h4 className="text-base font-bold text-white mb-2">{scored.deal.mysteryTitle}</h4>
-                      <p className="text-xs text-slate-400 line-clamp-2 mb-3">{scored.deal.descriptionClues}</p>
-                      <div className="text-[10px] font-mono text-purple-300 bg-purple-950/40 border border-purple-800/30 p-2 rounded-xl">
-                        {scored.explanation}
-                      </div>
+                    <h4 className="text-base font-bold text-white">{item.deal.mysteryTitle}</h4>
+                    <p className="text-xs text-[#86868b] line-clamp-2">{item.deal.descriptionClues}</p>
+                    <div className="text-[10px] font-mono text-[#bf5af2] bg-[#1c1c1e] p-2 rounded-xl border border-white/5">
+                      {item.explanation}
                     </div>
-
-                    <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-                      <div>
-                        <div className="text-[10px] text-slate-500 line-through">${scored.deal.originalPrice.toFixed(2)}</div>
-                        <div className="text-lg font-black text-emerald-400">${scored.deal.mysteryPrice.toFixed(2)}/nt</div>
+                    <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between">
+                      <div className="text-lg font-bold text-[#30d158] font-mono">
+                        ${item.deal.mysteryPrice.toFixed(2)}/nt
                       </div>
                       <button
-                        onClick={() => openBookingModal(scored.deal)}
-                        className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition"
+                        onClick={() => openBookingModal(item.deal)}
+                        className="px-4 py-1.5 rounded-full bg-[#0071e3] text-white text-xs font-semibold"
                       >
-                        Book Stay
+                        Reserve
                       </button>
                     </div>
                   </div>
@@ -883,56 +1110,51 @@ export default function App() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 3: MY RESERVATIONS & SECRET HOTEL REVEAL (PHASE 7) */}
+        {/* VIEW 4: MY TRIPS & SECRET IDENTITY UNLOCK (PHASE 7 STATE MACHINE) */}
         {/* ========================================================================= */}
-        {activeTab === 'bookings' && (
+        {activeSection === 'trips' && (
           <div className="space-y-8 animate-in fade-in duration-300">
-            <div className="flex items-center justify-between border-b border-white/10 pb-6">
+            <div className="border-b border-white/[0.08] pb-6 flex items-center justify-between">
               <div>
-                <h2 className="text-3xl font-extrabold text-white flex items-center gap-2">
-                  My Reservations
-                  <span className="text-xs font-mono bg-indigo-500/20 text-indigo-300 px-2.5 py-0.5 rounded-full border border-indigo-500/30">
-                    Phase 7 State Machine
-                  </span>
-                </h2>
-                <p className="text-slate-400 text-sm mt-1">
-                  Track confidential reservations, complete 15-minute checkout holds, and view revealed hotel credentials.
+                <h2 className="text-3xl font-bold text-white">My Reservations</h2>
+                <p className="text-xs text-[#86868b] mt-1">
+                  Manage confidential reservations and complete payments to unlock confidential hotel identities.
                 </p>
               </div>
               {currentUser && (
                 <button
                   onClick={loadUserBookings}
                   disabled={bookingsLoading}
-                  className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-semibold"
+                  className="text-xs text-[#0071e3] hover:underline flex items-center gap-1"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${bookingsLoading ? 'animate-spin' : ''}`} />
-                  <span>Refresh Bookings</span>
+                  <span>Refresh</span>
                 </button>
               )}
             </div>
 
             {!currentUser ? (
-              <div className="p-16 text-center glass-card rounded-3xl border border-white/5 space-y-4">
-                <User className="w-10 h-10 text-slate-500 mx-auto" />
-                <h4 className="text-lg font-bold text-white">Sign In to View Your Trips</h4>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  Sign in or register an account to manage your confidential mystery hotel bookings.
+              <div className="bg-[#161617] rounded-[28px] p-12 text-center border border-white/[0.08] space-y-4 max-w-md mx-auto">
+                <User className="w-10 h-10 text-[#86868b] mx-auto" />
+                <h3 className="text-lg font-bold text-white">Sign In to View Trips</h3>
+                <p className="text-xs text-[#86868b]">
+                  Please sign in to track your reservation state machine and unlock hotel credentials.
                 </p>
                 <button
-                  onClick={() => setActiveTab('auth')}
-                  className="px-6 py-2.5 rounded-full bg-white text-slate-950 text-xs font-bold transition shadow-lg"
+                  onClick={() => setActiveSection('auth')}
+                  className="px-6 py-2.5 rounded-full bg-[#0071e3] text-white text-xs font-semibold"
                 >
-                  Go to Sign In
+                  Sign In
                 </button>
               </div>
             ) : myBookings.length === 0 ? (
-              <div className="p-16 text-center glass-card rounded-3xl border border-white/5 space-y-3">
-                <Calendar className="w-10 h-10 text-slate-500 mx-auto" />
-                <h4 className="text-base font-bold text-white">No active bookings found</h4>
-                <p className="text-xs text-slate-400">Browse mystery deals and reserve your first confidential luxury getaway.</p>
+              <div className="bg-[#161617] rounded-[28px] p-12 text-center border border-white/[0.08] space-y-3">
+                <Calendar className="w-10 h-10 text-[#86868b] mx-auto" />
+                <h3 className="text-base font-bold text-white">No active trips</h3>
+                <p className="text-xs text-[#86868b]">Browse secret deals and book your next getaway.</p>
                 <button
-                  onClick={() => setActiveTab('deals')}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold"
+                  onClick={() => setActiveSection('deals')}
+                  className="px-5 py-2 rounded-full bg-[#0071e3] text-white text-xs font-semibold"
                 >
                   Explore Stays
                 </button>
@@ -945,49 +1167,48 @@ export default function App() {
                   return (
                     <div
                       key={b.bookingId}
-                      className={`glass-panel rounded-3xl p-6 transition border ${
-                        isConfirmed ? 'border-emerald-500/30 bg-emerald-950/10' : 'border-white/10'
+                      className={`bg-[#161617] rounded-[24px] p-6 border transition-all ${
+                        isConfirmed ? 'border-[#30d158]/30 shadow-lg shadow-[#30d158]/5' : 'border-white/[0.08]'
                       }`}
                     >
-                      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-white/10 gap-4">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-white/[0.08] gap-4">
                         <div>
                           <div className="flex items-center space-x-2 text-xs mb-1">
-                            <span className="font-mono text-indigo-400 font-bold">{b.bookingReference}</span>
+                            <span className="font-mono text-[#0071e3] font-bold">{b.bookingReference}</span>
                             <span>•</span>
                             <span
-                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                                 isConfirmed
-                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                  ? 'bg-[#30d158]/15 text-[#30d158]'
                                   : isPending
-                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse'
-                                  : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                  ? 'bg-[#ffd60a]/15 text-[#ffd60a] animate-pulse'
+                                  : 'bg-[#ff453a]/15 text-[#ff453a]'
                               }`}
                             >
                               {b.status}
                             </span>
                           </div>
-                          {/* Hotel Title - Revealed vs Masked */}
-                          <h3 className="text-xl font-black text-white flex items-center gap-2">
+
+                          <h3 className="text-xl font-bold text-white flex items-center gap-2">
                             {isConfirmed ? (
                               <>
-                                <Unlock className="w-5 h-5 text-emerald-400" />
+                                <Unlock className="w-5 h-5 text-[#30d158]" />
                                 <span>{b.hotelName}</span>
                               </>
                             ) : (
                               <>
-                                <Lock className="w-5 h-5 text-amber-400" />
+                                <Lock className="w-5 h-5 text-[#ffd60a]" />
                                 <span>Confidential 5-Star Hotel ({b.zoneArea}, {b.city})</span>
                               </>
                             )}
                           </h3>
                         </div>
 
-                        {/* Status Actions */}
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-2">
                           {isPending && (
                             <button
                               onClick={() => handleConfirmReservation(b.bookingId)}
-                              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
+                              className="px-4 py-2 rounded-full bg-[#30d158] hover:bg-[#32d74b] text-black text-xs font-bold transition flex items-center gap-1"
                             >
                               <CreditCard className="w-3.5 h-3.5" />
                               <span>Complete Payment</span>
@@ -996,7 +1217,7 @@ export default function App() {
                           {b.status !== 'CANCELLED' && b.status !== 'EXPIRED' && (
                             <button
                               onClick={() => handleCancelBooking(b.bookingId)}
-                              className="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-semibold transition"
+                              className="px-3 py-2 rounded-full bg-[#1c1c1e] text-[#ff453a] hover:bg-[#2c2c2e] text-xs font-medium border border-white/10 transition"
                             >
                               Cancel Stay
                             </button>
@@ -1004,43 +1225,42 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* Revealed Details Banner */}
+                      {/* Secret Hotel Reveal Card */}
                       {isConfirmed && (
-                        <div className="mt-4 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-3">
-                          <div className="space-y-1">
-                            <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">
-                              🎉 Secret Identity Unlocked
+                        <div className="mt-4 p-4 rounded-xl bg-[#30d158]/10 border border-[#30d158]/20 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-3">
+                          <div>
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-[#30d158] block mb-0.5">
+                              Secret Identity Revealed
                             </span>
-                            <p className="text-white font-medium flex items-center gap-1.5">
-                              <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-                              {b.hotelAddress}
-                            </p>
+                            <div className="text-white font-medium flex items-center gap-1.5">
+                              <MapPin className="w-3.5 h-3.5 text-[#30d158]" />
+                              <span>{b.hotelAddress}</span>
+                            </div>
                           </div>
                           {b.hotelPhone && (
-                            <div className="text-slate-300 font-mono text-xs">
-                              Concierge Phone: <strong className="text-white">{b.hotelPhone}</strong>
+                            <div className="text-[#86868b] font-mono text-xs">
+                              Concierge: <strong className="text-white">{b.hotelPhone}</strong>
                             </div>
                           )}
                         </div>
                       )}
 
-                      {/* Stay Metadata */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 text-xs">
                         <div>
-                          <span className="text-slate-400 block text-[10px]">Dates of Stay</span>
+                          <span className="text-[#86868b] block text-[10px]">Dates</span>
                           <strong className="text-white font-mono">{b.checkInDate} → {b.checkOutDate}</strong>
                         </div>
                         <div>
-                          <span className="text-slate-400 block text-[10px]">Room Tier</span>
+                          <span className="text-[#86868b] block text-[10px]">Room Category</span>
                           <strong className="text-white">{b.roomTypeName} ({b.stayNights} Nights)</strong>
                         </div>
                         <div>
-                          <span className="text-slate-400 block text-[10px]">Guest Name</span>
+                          <span className="text-[#86868b] block text-[10px]">Guest</span>
                           <strong className="text-white">{b.guestName}</strong>
                         </div>
                         <div>
-                          <span className="text-slate-400 block text-[10px]">Total Paid Amount</span>
-                          <strong className="text-emerald-400 font-black text-sm">${b.totalAmount.toFixed(2)}</strong>
+                          <span className="text-[#86868b] block text-[10px]">Total Amount</span>
+                          <strong className="text-[#30d158] font-mono font-bold text-sm">${b.totalAmount.toFixed(2)}</strong>
                         </div>
                       </div>
                     </div>
@@ -1052,29 +1272,27 @@ export default function App() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 4: HOTEL PARTNER & MANAGER PORTAL */}
+        {/* VIEW 5: HOTEL PARTNER & DEAL PUBLISHER */}
         {/* ========================================================================= */}
-        {activeTab === 'manager' && (
+        {activeSection === 'partner' && (
           <div className="space-y-8 animate-in fade-in duration-300">
-            <div className="border-b border-white/10 pb-6">
-              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold mb-3">
-                <Building className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Partner Property Control Room</span>
-              </div>
-              <h2 className="text-3xl font-extrabold text-white">Hotel Management & Deal Publisher</h2>
-              <p className="text-slate-400 text-sm mt-1">
-                Onboard properties, define luxury suites, seed room calendars, and monetize perishable inventory through mystery discounts.
+            <div className="border-b border-white/[0.08] pb-6">
+              <span className="text-xs font-semibold uppercase text-[#ffd60a] block mb-1">
+                Hotel Management Portal
+              </span>
+              <h2 className="text-3xl font-bold text-white">Partner Property Control Room</h2>
+              <p className="text-xs text-[#86868b] mt-1">
+                Onboard properties, define luxury suites, seed room calendars, and monetize unsold inventory with mystery discounts.
               </p>
             </div>
 
-            {/* Quick Property Onboarding Card */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Hotel Onboarding Form */}
-              <div className="glass-panel rounded-3xl p-6 space-y-4">
-                <h4 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Building className="w-4 h-4 text-indigo-400" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Hotel Onboarding */}
+              <div className="bg-[#161617] rounded-[24px] p-6 border border-white/[0.08] space-y-4">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <Building className="w-4 h-4 text-[#0071e3]" />
                   Onboard Luxury Property
-                </h4>
+                </h3>
                 <form
                   onSubmit={async (e) => {
                     e.preventDefault();
@@ -1097,76 +1315,63 @@ export default function App() {
                       setManagerMessage({ type: 'success', text: 'Hotel property onboarded successfully!' });
                       loadPartnerData();
                     } catch (err) {
-                      setManagerMessage({ type: 'error', text: err.response?.data?.message || 'Failed to onboard hotel' });
+                      setManagerMessage({ type: 'error', text: err.response?.data?.message || 'Failed to onboard property' });
                     }
                   }}
                   className="space-y-3"
                 >
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Hotel Property Name</label>
+                    <label className="block text-[11px] text-[#86868b] mb-1">Property Name</label>
                     <input
                       type="text"
                       value={hotelForm.name}
                       onChange={(e) => setHotelForm({ ...hotelForm, name: e.target.value })}
-                      className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                      className="w-full bg-[#1c1c1e] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
                       required
                     />
                   </div>
-
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] text-slate-400 mb-1">City</label>
+                      <label className="block text-[11px] text-[#86868b] mb-1">City</label>
                       <input
                         type="text"
                         value={hotelForm.city}
                         onChange={(e) => setHotelForm({ ...hotelForm, city: e.target.value })}
-                        className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                        className="w-full bg-[#1c1c1e] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] text-slate-400 mb-1">Zone / Neighborhood</label>
+                      <label className="block text-[11px] text-[#86868b] mb-1">Zone / Area</label>
                       <input
                         type="text"
                         value={hotelForm.zoneArea}
                         onChange={(e) => setHotelForm({ ...hotelForm, zoneArea: e.target.value })}
-                        className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                        className="w-full bg-[#1c1c1e] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
                         required
                       />
                     </div>
                   </div>
-
-                  <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Street Address</label>
-                    <input
-                      type="text"
-                      value={hotelForm.address}
-                      onChange={(e) => setHotelForm({ ...hotelForm, address: e.target.value })}
-                      className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-                      required
-                    />
-                  </div>
-
                   <button
                     type="submit"
-                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition"
+                    className="w-full py-2.5 rounded-full bg-[#0071e3] text-white text-xs font-semibold"
                   >
                     Register Property
                   </button>
                 </form>
               </div>
 
-              {/* Deal Publisher Form */}
-              <div className="glass-panel rounded-3xl p-6 space-y-4">
-                <h4 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Tag className="w-4 h-4 text-amber-400" />
+              {/* Deal Publisher */}
+              <div className="bg-[#161617] rounded-[24px] p-6 border border-white/[0.08] space-y-4">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-[#ffd60a]" />
                   Publish Mystery Deal
-                </h4>
+                </h3>
                 <form
                   onSubmit={async (e) => {
                     e.preventDefault();
                     if (!dealPublishForm.roomTypeId) {
-                      alert('Please select a valid Room Category.');
+                      alert('Select a valid Room Category.');
                       return;
                     }
                     try {
@@ -1181,20 +1386,20 @@ export default function App() {
                       setManagerMessage({ type: 'success', text: 'Mystery deal published successfully!' });
                       loadDeals();
                     } catch (err) {
-                      setManagerMessage({ type: 'error', text: err.response?.data?.message || 'Publishing failed.' });
+                      setManagerMessage({ type: 'error', text: err.response?.data?.message || 'Failed to publish deal' });
                     }
                   }}
                   className="space-y-3"
                 >
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Select Room Category</label>
+                    <label className="block text-[11px] text-[#86868b] mb-1">Room Category</label>
                     <select
                       value={dealPublishForm.roomTypeId}
                       onChange={(e) => setDealPublishForm({ ...dealPublishForm, roomTypeId: e.target.value })}
-                      className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                      className="w-full bg-[#1c1c1e] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
                       required
                     >
-                      <option value="">Select Category</option>
+                      <option value="">Select Suite</option>
                       {roomTypes.map((rt) => (
                         <option key={rt.id} value={rt.id}>
                           {rt.name} (${rt.basePrice}/nt)
@@ -1202,21 +1407,19 @@ export default function App() {
                       ))}
                     </select>
                   </div>
-
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Mystery Clue Title (Masked)</label>
+                    <label className="block text-[11px] text-[#86868b] mb-1">Clue Title (Masked)</label>
                     <input
                       type="text"
                       value={dealPublishForm.mysteryTitle}
                       onChange={(e) => setDealPublishForm({ ...dealPublishForm, mysteryTitle: e.target.value })}
-                      className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                      className="w-full bg-[#1c1c1e] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
                       required
                     />
                   </div>
-
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">
-                      Discount Percentage: <strong className="text-amber-400">{dealPublishForm.discountPercent}%</strong>
+                    <label className="block text-[11px] text-[#86868b] mb-1">
+                      Discount: <strong className="text-[#ffd60a]">{dealPublishForm.discountPercent}%</strong>
                     </label>
                     <input
                       type="range"
@@ -1225,24 +1428,12 @@ export default function App() {
                       step="5"
                       value={dealPublishForm.discountPercent}
                       onChange={(e) => setDealPublishForm({ ...dealPublishForm, discountPercent: e.target.value })}
-                      className="w-full accent-indigo-500"
+                      className="w-full accent-[#0071e3]"
                     />
                   </div>
-
-                  <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Description Clues</label>
-                    <textarea
-                      rows="2"
-                      value={dealPublishForm.descriptionClues}
-                      onChange={(e) => setDealPublishForm({ ...dealPublishForm, descriptionClues: e.target.value })}
-                      className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-                      required
-                    />
-                  </div>
-
                   <button
                     type="submit"
-                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-indigo-600 text-white font-bold text-xs transition"
+                    className="w-full py-2.5 rounded-full bg-[#0071e3] text-white text-xs font-semibold"
                   >
                     Publish Masked Deal
                   </button>
@@ -1252,10 +1443,8 @@ export default function App() {
 
             {managerMessage && (
               <div
-                className={`p-4 rounded-2xl text-xs font-semibold ${
-                  managerMessage.type === 'success'
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                    : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                className={`p-3.5 rounded-xl text-xs font-medium ${
+                  managerMessage.type === 'success' ? 'bg-[#30d158]/15 text-[#30d158]' : 'bg-[#ff453a]/15 text-[#ff453a]'
                 }`}
               >
                 {managerMessage.text}
@@ -1265,28 +1454,25 @@ export default function App() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 5: AUTHENTICATION / ACCOUNT SWITCHER */}
+        {/* VIEW 6: AUTHENTICATION / ACCOUNT SWITCHER */}
         {/* ========================================================================= */}
-        {activeTab === 'auth' && (
+        {activeSection === 'auth' && (
           <div className="max-w-md mx-auto space-y-6 pt-6 animate-in fade-in duration-300">
             <div className="text-center space-y-2">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center mx-auto border border-indigo-500/30">
-                <User className="w-6 h-6" />
-              </div>
-              <h2 className="text-2xl font-black text-white">
-                {authMode === 'login' ? 'Sign In to MysteryStay' : 'Create an Account'}
+              <h2 className="text-2xl font-bold text-white">
+                {authMode === 'login' ? 'Sign In with MysteryStay ID' : 'Create MysteryStay ID'}
               </h2>
-              <p className="text-xs text-slate-400">
-                Seamless role switching between Customer, Hotel Manager, and Platform Admin.
+              <p className="text-xs text-[#86868b]">
+                Seamless switching between Customer, Hotel Manager, and Administrator accounts.
               </p>
             </div>
 
-            <div className="glass-panel rounded-3xl p-8 space-y-5">
-              {/* Role Presets Quick-Click Buttons */}
+            <div className="bg-[#161617] rounded-[28px] p-8 border border-white/[0.08] space-y-5">
+              {/* Quick Switch Presets */}
               <div>
-                <label className="block text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-2">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-[#86868b] block mb-2">
                   Quick Role Switcher
-                </label>
+                </span>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { label: 'Traveler', email: 'customer@mysterystay.com', role: 'ROLE_CUSTOMER' },
@@ -1304,7 +1490,7 @@ export default function App() {
                           fullName: preset.label === 'Traveler' ? 'Alex Morgan' : preset.label === 'Manager' ? 'Robert Sterling' : 'Victoria Vance'
                         }));
                       }}
-                      className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-white/10 hover:border-indigo-500 text-[11px] font-semibold text-slate-300 transition"
+                      className="px-2 py-1.5 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[11px] font-medium text-[#f5f5f7] border border-white/5 transition"
                     >
                       {preset.label}
                     </button>
@@ -1315,81 +1501,59 @@ export default function App() {
               <form onSubmit={handleLoginRegister} className="space-y-4">
                 {authMode === 'register' && (
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1">Full Name</label>
+                    <label className="block text-[11px] text-[#86868b] mb-1">Full Name</label>
                     <input
                       type="text"
                       value={authForm.fullName}
                       onChange={(e) => setAuthForm({ ...authForm, fullName: e.target.value })}
-                      className="w-full bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white"
+                      className="w-full bg-[#1c1c1e] border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white"
                       required
                     />
                   </div>
                 )}
-
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Email Address</label>
+                  <label className="block text-[11px] text-[#86868b] mb-1">Email</label>
                   <input
                     type="email"
                     value={authForm.email}
                     onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
-                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white"
+                    className="w-full bg-[#1c1c1e] border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white"
                     required
                   />
                 </div>
-
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Password</label>
+                  <label className="block text-[11px] text-[#86868b] mb-1">Password</label>
                   <input
                     type="password"
                     value={authForm.password}
                     onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
-                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white"
+                    className="w-full bg-[#1c1c1e] border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white"
                     required
                   />
                 </div>
-
-                {authMode === 'register' && (
-                  <div>
-                    <label className="block text-xs text-slate-400 mb-1">Platform Role</label>
-                    <select
-                      value={authForm.role}
-                      onChange={(e) => setAuthForm({ ...authForm, role: e.target.value })}
-                      className="w-full bg-slate-900 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white"
-                    >
-                      <option value="ROLE_CUSTOMER">Traveler (Customer)</option>
-                      <option value="ROLE_HOTEL_MANAGER">Hotel Manager</option>
-                      <option value="ROLE_ADMIN">System Administrator</option>
-                    </select>
-                  </div>
-                )}
-
                 <button
                   type="submit"
                   disabled={authLoading}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-xs transition shadow-lg shadow-indigo-500/25 disabled:opacity-50"
+                  className="w-full py-2.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold transition"
                 >
-                  {authLoading ? 'Authenticating...' : authMode === 'login' ? 'Sign In' : 'Create Account'}
+                  {authLoading ? 'Signing In...' : authMode === 'login' ? 'Sign In' : 'Create Account'}
                 </button>
               </form>
 
-              <div className="pt-2 text-center">
+              <div className="text-center pt-2">
                 <button
                   type="button"
                   onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-                  className="text-xs text-indigo-400 hover:underline font-medium"
+                  className="text-xs text-[#2997ff] hover:underline"
                 >
-                  {authMode === 'login'
-                    ? "Don't have an account? Sign up"
-                    : 'Already have an account? Sign in'}
+                  {authMode === 'login' ? "Don't have an ID? Create one" : 'Have an ID? Sign in'}
                 </button>
               </div>
 
               {authMessage && (
                 <div
-                  className={`p-3 rounded-xl text-xs font-semibold ${
-                    authMessage.type === 'success'
-                      ? 'bg-emerald-500/20 text-emerald-300'
-                      : 'bg-rose-500/20 text-rose-300'
+                  className={`p-3 rounded-xl text-xs font-medium ${
+                    authMessage.type === 'success' ? 'bg-[#30d158]/15 text-[#30d158]' : 'bg-[#ff453a]/15 text-[#ff453a]'
                   }`}
                 >
                   {authMessage.text}
@@ -1401,209 +1565,172 @@ export default function App() {
       </main>
 
       {/* ========================================================================= */}
-      {/* NATIVE MODAL DIALOG: BOOKING & SECRET HOTEL REVEAL CHECKOUT */}
+      {/* 4. NATIVE MODAL CHECKOUT & HOTEL IDENTITY REVEAL (MODERN WEB GUIDANCE) */}
       {/* ========================================================================= */}
       <dialog
         ref={bookingDialogRef}
-        aria-labelledby="booking-dialog-title"
-        className="glass-panel text-slate-100 rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-white/10 m-auto focus:outline-none"
+        aria-labelledby="booking-title"
+        className="bg-[#1c1c1e] text-[#f5f5f7] rounded-[28px] p-7 max-w-md w-full border border-white/[0.12] shadow-2xl m-auto focus:outline-none"
       >
         {selectedDealForBooking && (
-          <div className="space-y-6">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+          <div className="space-y-5">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
               <div>
-                <span className="text-[10px] font-mono uppercase bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full">
-                  Phase 7 Booking Engine
-                </span>
-                <h3 id="booking-dialog-title" className="text-lg font-black text-white mt-1">
+                <span className="text-[10px] font-mono uppercase text-[#0071e3] font-bold block">
                   Reserve Mystery Stay
+                </span>
+                <h3 id="booking-title" className="text-base font-bold text-white mt-0.5">
+                  {selectedDealForBooking.mysteryTitle}
                 </h3>
               </div>
               <button
                 onClick={closeBookingModal}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition"
+                className="p-1 rounded-full text-[#86868b] hover:text-white hover:bg-white/10 transition"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* If NOT booked yet: Checkout Form */}
+            {/* Stage 1: Checkout Form */}
             {!activeBooking && (
               <form onSubmit={handleInitiateBooking} className="space-y-4">
-                <div className="p-3.5 rounded-2xl bg-slate-900 border border-white/5 space-y-1">
-                  <span className="text-xs text-indigo-400 font-bold">{selectedDealForBooking.mysteryTitle}</span>
-                  <div className="text-xs text-slate-400 flex items-center gap-1.5">
-                    <MapPin className="w-3 h-3" />
-                    <span>{selectedDealForBooking.zoneArea}, {selectedDealForBooking.city} ({selectedDealForBooking.starRating}★)</span>
+                <div className="p-3 rounded-xl bg-[#2c2c2e] text-xs space-y-1">
+                  <div className="flex justify-between text-[#86868b]">
+                    <span>Location Clue:</span>
+                    <strong className="text-white">{selectedDealForBooking.zoneArea}, {selectedDealForBooking.city}</strong>
                   </div>
-                  <div className="text-base font-extrabold text-emerald-400 pt-1">
-                    ${selectedDealForBooking.mysteryPrice.toFixed(2)}
-                    <span className="text-xs font-normal text-slate-400"> / night (Save {selectedDealForBooking.discountPercent}%)</span>
+                  <div className="flex justify-between text-[#86868b]">
+                    <span>Mystery Price:</span>
+                    <strong className="text-[#30d158] font-mono">${selectedDealForBooking.mysteryPrice.toFixed(2)}/nt</strong>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Check-In Date</label>
+                    <label className="block text-[11px] text-[#86868b] mb-1">Check-In</label>
                     <input
                       type="date"
                       value={bookingFormData.checkInDate}
                       onChange={(e) => setBookingFormData({ ...bookingFormData, checkInDate: e.target.value })}
-                      className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                      className="w-full bg-[#2c2c2e] border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Check-Out Date</label>
+                    <label className="block text-[11px] text-[#86868b] mb-1">Check-Out</label>
                     <input
                       type="date"
                       value={bookingFormData.checkOutDate}
                       onChange={(e) => setBookingFormData({ ...bookingFormData, checkOutDate: e.target.value })}
-                      className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Guest Full Name</label>
-                    <input
-                      type="text"
-                      value={bookingFormData.guestName}
-                      onChange={(e) => setBookingFormData({ ...bookingFormData, guestName: e.target.value })}
-                      className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Contact Phone</label>
-                    <input
-                      type="tel"
-                      value={bookingFormData.guestPhone}
-                      onChange={(e) => setBookingFormData({ ...bookingFormData, guestPhone: e.target.value })}
-                      className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                      className="w-full bg-[#2c2c2e] border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white"
                       required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">Guest Email</label>
+                  <label className="block text-[11px] text-[#86868b] mb-1">Guest Full Name</label>
                   <input
-                    type="email"
-                    value={bookingFormData.guestEmail}
-                    onChange={(e) => setBookingFormData({ ...bookingFormData, guestEmail: e.target.value })}
-                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                    type="text"
+                    value={bookingFormData.guestName}
+                    onChange={(e) => setBookingFormData({ ...bookingFormData, guestName: e.target.value })}
+                    className="w-full bg-[#2c2c2e] border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white"
                     required
                   />
                 </div>
 
-                <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-300 flex items-start gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Pessimistic Room Lock:</strong> Submitting locks room inventory with a 15-minute hold. Double-booking is guaranteed impossible.
-                  </span>
+                <div className="p-2.5 rounded-xl bg-[#0071e3]/10 border border-[#0071e3]/20 text-[11px] text-[#2997ff] flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 flex-shrink-0" />
+                  <span>Pessimistic row locking holds room for 15 minutes.</span>
                 </div>
 
                 <button
                   type="submit"
                   disabled={bookingSubmitting}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs transition shadow-lg shadow-indigo-500/30 disabled:opacity-50"
+                  className="w-full py-2.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold transition"
                 >
-                  {bookingSubmitting ? 'Acquiring Concurrency Lock...' : 'Lock Reservation (15-Min Hold)'}
+                  {bookingSubmitting ? 'Locking Inventory...' : 'Lock Reservation (15-Min Hold)'}
                 </button>
               </form>
             )}
 
-            {/* If In PENDING_PAYMENT State: 15-Minute Countdown & Reveal Action */}
+            {/* Stage 2: 15-Minute Countdown Hold */}
             {activeBooking && activeBooking.status === 'PENDING_PAYMENT' && (
-              <div className="space-y-5 animate-in fade-in">
-                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-amber-400 tracking-wider">
-                    Reservation Held • Complete Payment Before Expiry
+              <div className="space-y-4 animate-in fade-in">
+                <div className="p-4 rounded-xl bg-[#ffd60a]/10 border border-[#ffd60a]/20 text-center space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-[#ffd60a] block font-bold">
+                    Reservation Hold Active
                   </span>
-                  <div className="text-3xl font-black text-amber-300 font-mono flex items-center justify-center gap-2">
-                    <Clock className="w-5 h-5 text-amber-400 animate-pulse" />
+                  <div className="text-3xl font-bold text-[#ffd60a] font-mono flex items-center justify-center gap-2">
+                    <Clock className="w-5 h-5 animate-pulse" />
                     <span>
                       {Math.floor(countdownSeconds / 60)}:{(countdownSeconds % 60).toString().padStart(2, '0')}
                     </span>
                   </div>
-                  <span className="text-[11px] text-slate-400 block">
-                    Booking Reference: <strong className="text-white font-mono">{activeBooking.bookingReference}</strong>
+                  <span className="text-[11px] text-[#86868b] block font-mono">
+                    Ref: {activeBooking.bookingReference}
                   </span>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-900 border border-white/10 space-y-2 text-xs">
-                  <div className="flex justify-between text-slate-400">
+                <div className="p-3 rounded-xl bg-[#2c2c2e] text-xs space-y-1">
+                  <div className="flex justify-between text-[#86868b]">
+                    <span>Total Amount:</span>
+                    <strong className="text-[#30d158] font-mono text-sm">${activeBooking.totalAmount.toFixed(2)}</strong>
+                  </div>
+                  <div className="flex justify-between text-[#86868b]">
                     <span>Stay Duration:</span>
                     <strong className="text-white">{activeBooking.stayNights} Nights</strong>
-                  </div>
-                  <div className="flex justify-between text-slate-400">
-                    <span>Nightly Rate:</span>
-                    <strong className="text-white">${activeBooking.nightlyRate.toFixed(2)}</strong>
-                  </div>
-                  <div className="flex justify-between text-slate-200 font-bold border-t border-white/10 pt-2 text-sm">
-                    <span>Total Amount:</span>
-                    <span className="text-emerald-400">${activeBooking.totalAmount.toFixed(2)}</span>
                   </div>
                 </div>
 
                 <button
-                  type="button"
                   onClick={() => handleConfirmReservation(activeBooking.bookingId)}
                   disabled={bookingSubmitting}
-                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm transition shadow-xl shadow-emerald-500/30 flex items-center justify-center gap-2"
+                  className="w-full py-2.5 rounded-full bg-[#30d158] hover:bg-[#32d74b] text-black text-xs font-bold transition flex items-center justify-center gap-1.5"
                 >
-                  <Unlock className="w-4 h-4" />
+                  <Unlock className="w-3.5 h-3.5" />
                   <span>Confirm & Reveal Secret Hotel Identity</span>
                 </button>
               </div>
             )}
 
-            {/* If CONFIRMED: Secret Identity Revealed! */}
+            {/* Stage 3: Confirmed & Secret Hotel Identity Unlocked! */}
             {activeBooking && activeBooking.status === 'CONFIRMED' && (
-              <div className="space-y-5 animate-in zoom-in-95 duration-300">
-                <div className="text-center space-y-2 pt-2">
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="w-6 h-6" />
+              <div className="space-y-4 animate-in zoom-in-95 duration-300">
+                <div className="text-center space-y-1">
+                  <div className="w-10 h-10 rounded-full bg-[#30d158]/20 text-[#30d158] flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-5 h-5" />
                   </div>
-                  <span className="text-[11px] font-mono text-emerald-400 uppercase tracking-widest font-black">
-                    Booking Confirmed • Secret Revealed
+                  <span className="text-[10px] font-mono text-[#30d158] uppercase font-bold tracking-wider block">
+                    Confirmed • Secret Revealed
                   </span>
-                  <h3 className="text-2xl font-black text-white">{activeBooking.hotelName}</h3>
+                  <h3 className="text-xl font-bold text-white">{activeBooking.hotelName}</h3>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-900 border border-emerald-500/30 space-y-2.5 text-xs">
+                <div className="p-3.5 rounded-xl bg-[#2c2c2e] text-xs space-y-2">
                   <div>
-                    <span className="text-[10px] text-slate-400 block">Exact Street Address</span>
-                    <strong className="text-white flex items-center gap-1.5 mt-0.5">
-                      <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-[10px] text-[#86868b] block">Street Address</span>
+                    <strong className="text-white flex items-center gap-1 mt-0.5">
+                      <MapPin className="w-3 h-3 text-[#30d158]" />
                       {activeBooking.hotelAddress}
                     </strong>
                   </div>
                   {activeBooking.hotelPhone && (
                     <div>
-                      <span className="text-[10px] text-slate-400 block">Direct Concierge Phone</span>
+                      <span className="text-[10px] text-[#86868b] block">Direct Concierge</span>
                       <strong className="text-white font-mono">{activeBooking.hotelPhone}</strong>
                     </div>
                   )}
-                  <div className="pt-2 border-t border-white/10 flex justify-between">
-                    <span className="text-slate-400">Reference:</span>
-                    <strong className="text-emerald-400 font-mono">{activeBooking.bookingReference}</strong>
-                  </div>
                 </div>
 
                 <button
-                  type="button"
                   onClick={() => {
                     closeBookingModal();
-                    setActiveTab('bookings');
+                    setActiveSection('trips');
                   }}
-                  className="w-full py-3 rounded-xl bg-white text-slate-950 font-bold text-xs hover:bg-slate-200 transition"
+                  className="w-full py-2.5 rounded-full bg-white text-black text-xs font-semibold hover:bg-[#f5f5f7] transition"
                 >
-                  View in My Reservations
+                  View in My Trips
                 </button>
               </div>
             )}
@@ -1611,21 +1738,27 @@ export default function App() {
         )}
       </dialog>
 
-      {/* Modern Big Tech Footer */}
-      <footer className="border-t border-white/10 bg-slate-950/80 py-8 text-xs text-slate-500 mt-20">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center space-x-2">
-            <span className="font-bold text-slate-300">MysteryStay Monolith</span>
-            <span>•</span>
-            <span>Java 21 • Spring Boot 3.3.5 • MySQL 8.4/9.x • Redis • React 18 • Vite • Tailwind</span>
+      {/* ========================================================================= */}
+      {/* 5. APPLE FLAT FOOTER (https://www.apple.com/in/ style) */}
+      {/* ========================================================================= */}
+      <footer className="bg-[#161617] border-t border-white/[0.08] py-8 text-[11px] text-[#86868b]">
+        <div className="max-w-[1024px] mx-auto px-4 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
+            <div className="flex items-center space-x-2 text-[#ceced2]">
+              <span className="font-semibold text-white">MysteryStay Architecture</span>
+              <span>•</span>
+              <span>Java 21 • Spring Boot 3.3.5 • MySQL 9.x • Redis • React 18 • Vite</span>
+            </div>
+            <div className="flex items-center space-x-3 font-mono">
+              <span className="text-[#30d158]">● MySQL Connected</span>
+              <span>•</span>
+              <span>API v1.0.0-PRO</span>
+            </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              API: <strong>v1.0.0-PHASE7</strong>
-            </span>
-            <span>MySQL: <strong>Connected</strong></span>
-          </div>
+          <p className="text-[#86868b] text-[10px] leading-relaxed">
+            Copyright © 2026 MysteryStay Inc. All rights reserved. Identity masking protected by rate-parity algorithms.
+            Unsold inventory monetization subject to partner hotel terms.
+          </p>
         </div>
       </footer>
     </div>
