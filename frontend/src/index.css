@@ -4,32 +4,32 @@
 
 @layer base {
   :root {
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-    background-color: #030712;
-    color: #f8fafc;
+    font-family: -apple-system, BlinkMacSystemFont, "Plus Jakarta Sans", "Inter", "Segoe UI", Roboto, sans-serif;
+    background-color: #f8fafc;
+    color: #0f172a;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Apple & Big-Tech Custom Scrollbar */
+  /* Custom Clean Scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: transparent;
+    background: #f1f5f9;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.2);
+    background: #cbd5e1;
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 163, 184, 0.4);
+    background: #94a3b8;
   }
 
   /* Native Modal Dialog standard styling per modern-web-guidance */
@@ -39,31 +39,21 @@
   dialog::backdrop {
     overflow: hidden;
     overscroll-behavior: contain;
-    background: rgba(3, 7, 18, 0.75);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 }
 
-.glass-panel {
-  background: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.luxury-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.glass-card {
-  background: rgba(17, 24, 39, 0.5);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.glass-card:hover {
-  border-color: rgba(99, 102, 241, 0.3);
-  box-shadow: 0 20px 40px -15px rgba(99, 102, 241, 0.12);
-}
-
-.glow-gradient {
-  background: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+.luxury-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  transform: translateY(-2px);
 }
