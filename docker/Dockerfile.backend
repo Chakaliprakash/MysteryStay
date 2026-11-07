@@ -1,0 +1,29 @@
+# ==============================================================================
+# Multi-stage Dockerfile for MysteryStay Spring Boot Backend (Java 21)
+# ==============================================================================
+
+# Stage 1: Build JAR using Maven & Eclipse Temurin 21
+FROM eclipse-temurin:21-jdk-alpine AS builder
+WORKDIR /workspace
+
+# Copy Maven descriptor and download dependencies
+COPY pom.xml .
+RUN apk add --no-cache maven && mvn dependency:go-offline -B
+
+# Copy source code and package
+COPY src ./src
+RUN mvn clean package -DskipTests
+
+# Stage 2: Minimal Distroless / JRE Runtime
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+
+# Create unprivileged user for security
+RUN addgroup -S mysterystay && adduser -S mysterystay -G mysterystay
+USER mysterystay:mysterystay
+
+COPY --from=builder /workspace/target/mysterystay-backend-*.jar app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

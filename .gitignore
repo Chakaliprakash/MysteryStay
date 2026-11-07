@@ -1,0 +1,46 @@
+# Root .gitignore for MysteryStay
+
+# Operating System
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment and Secrets
+*.env
+*.env.*
+!.env.example
+secrets/
+
+# IDE and Editors
+.idea/
+*.iml
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.project
+.classpath
+.settings/
+
+# Maven / Backend
+backend/target/
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+*.class
+*.log
+*.jar
+*.war
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# Docker
+docker/data/
