@@ -26,3 +26,11 @@ management:
   endpoint:
     health:
       show-details: always
+
+app:
+  jwt:
+    # 256-bit base64/hex key default for local dev
+    secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+    access-token-expiration-ms: 900000 # 15 minutes
+    refresh-token-expiration-ms: 604800000 # 7 days
+
