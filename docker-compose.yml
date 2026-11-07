@@ -1,0 +1,86 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: mysterystay-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-mysterystay_dev}
+      MYSQL_USER: ${DB_USERNAME:-mysterystay_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-mysterystay_pass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mysterystay-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: mysterystay-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mysterystay-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mysterystay-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-mysterystay_dev}
+      DB_USERNAME: ${DB_USERNAME:-mysterystay_user}
+      DB_PASSWORD: ${DB_PASSWORD:-mysterystay_pass}
+      JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      SPRING_PROFILES_ACTIVE: prod
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173,https://*.vercel.app}
+      UPI_VPA: ${UPI_VPA:-6302714896@mbk}
+      UPI_PAYEE_NAME: ${UPI_PAYEE_NAME:-MysteryStay Prive}
+    ports:
+      - "8080:8080"
+    networks:
+      - mysterystay-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mysterystay-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+    networks:
+      - mysterystay-network
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  mysterystay-network:
+    driver: bridge

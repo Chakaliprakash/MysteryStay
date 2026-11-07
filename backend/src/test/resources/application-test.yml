@@ -39,5 +39,8 @@ app:
     currency: INR
     exchange-rate-usd-to-inr: 85.00
     expiry-minutes: 15
+  cors:
+    allowed-origins: http://localhost:5173,http://localhost:3000
+
 
 

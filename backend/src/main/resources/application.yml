@@ -44,5 +44,8 @@ app:
     currency: ${UPI_CURRENCY:INR}
     exchange-rate-usd-to-inr: ${UPI_USD_TO_INR:85.00}
     expiry-minutes: ${UPI_EXPIRY_MINUTES:15}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,https://*.vercel.app,https://mysterystay.vercel.app}
+
 
 
