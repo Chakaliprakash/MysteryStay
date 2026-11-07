@@ -172,4 +172,24 @@ export const cancelBooking = async (bookingId) => {
   return response.data;
 };
 
+// Payments & Sandbox Checkout (Phase 8)
+export const createPaymentOrder = async (bookingId) => {
+  const response = await api.post('/payments/create-order', { bookingId });
+  return response.data;
+};
+
+export const verifyPayment = async (orderId, paymentId, signature) => {
+  const response = await api.post('/payments/verify', {
+    orderId,
+    paymentId,
+    signature
+  });
+  return response.data;
+};
+
+export const fetchPaymentByBookingId = async (bookingId) => {
+  const response = await api.get(`/payments/booking/${bookingId}`);
+  return response.data;
+};
+
 export default api;

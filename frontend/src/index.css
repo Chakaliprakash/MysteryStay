@@ -5,26 +5,38 @@
 @layer base {
   :root {
     color-scheme: light;
-    --radius-card: 20px;
-    --radius-pill: 9999px;
+    --navy-primary: #14251F;
+    --ivory-base: #F8F6F0;
+    --gold-champagne: #C6A66B;
   }
 
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Plus Jakarta Sans", "Inter", -apple-system, Roboto, sans-serif;
-    background-color: #f8fafc;
-    color: #0f172a;
+    font-family: "Plus Jakarta Sans", Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #F8F6F0;
+    color: #1C1F24;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
 
-  /* Ultra-Smooth 60fps GPU Acceleration */
+  /* GPU-Accelerated Fluid Layout */
   * {
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Custom Clean Minimalist Scrollbar */
+  /* Editorial Serif Headings */
+  h1, h2, h3, .font-editorial {
+    font-family: "DM Serif Display", "Playfair Display", Georgia, serif;
+    letter-spacing: -0.015em;
+  }
+
+  /* Tabular Numerals for Prices & Countdown Timers */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Custom Warm Scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -33,80 +45,37 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: #D8D4CA;
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-  }
-
-  /* Native Modal Dialog styling per modern-web-guidance */
-  dialog:modal {
-    overscroll-behavior: contain;
-  }
-  dialog::backdrop {
-    overflow: hidden;
-    overscroll-behavior: contain;
-    background: rgba(15, 23, 42, 0.55);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    animation: backdropFade 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    background: #C6A66B;
   }
 }
 
-@keyframes backdropFade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+@layer utilities {
+  /* Subtle Luxury Hover Lift */
+  .luxury-card-hover {
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .luxury-card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 36px -6px rgba(20, 37, 31, 0.08), 0 6px 14px -2px rgba(20, 37, 31, 0.04);
+  }
 
-@keyframes floatSoft {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-4px); }
-}
+  /* Champagne Shimmer Effect */
+  .shimmer-gold {
+    background: linear-gradient(90deg, #F8F6F0 0%, #F4EEDA 50%, #F8F6F0 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite linear;
+  }
 
-@keyframes pulseGlow {
-  0%, 100% { opacity: 0.8; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.03); }
-}
-
-/* UI-UX Pro Max Luxury Card Tokens */
-.luxury-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: transform, box-shadow;
-  transform: translateZ(0);
-}
-
-.luxury-card:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
-  transform: translateY(-4px) translateZ(0);
-}
-
-/* Liquid Glass Pill & Overlay */
-.liquid-glass {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-}
-
-.liquid-glass-dark {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-}
-
-/* Shimmer animation for real-time rates */
-.shimmer-bg {
-  background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  /* Discrete Mystery Blur for Hotel Identifiers */
+  .mystery-blur {
+    filter: blur(4px);
+    user-select: none;
+    pointer-events: none;
+  }
 }
 
 @keyframes shimmer {
