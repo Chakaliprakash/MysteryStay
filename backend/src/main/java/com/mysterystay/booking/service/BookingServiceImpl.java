@@ -131,6 +131,14 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
+    public BookingResponse getBookingById(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException("Booking not found with ID: " + bookingId, HttpStatus.NOT_FOUND, "BOOKING_NOT_FOUND"));
+        return BookingResponse.from(booking);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public BookingResponse getBookingByReference(String bookingReference, Long userId, boolean isAdmin) {
         Booking booking = bookingRepository.findByBookingReference(bookingReference)
                 .orElseThrow(() -> new AppException("Booking not found with reference: " + bookingReference, HttpStatus.NOT_FOUND, "BOOKING_NOT_FOUND"));

@@ -14,6 +14,11 @@ public interface BookingService {
     BookingResponse createBooking(CreateBookingRequest request, Long userId);
 
     /**
+     * Retrieves booking details by ID (internal module API).
+     */
+    BookingResponse getBookingById(Long bookingId);
+
+    /**
      * Retrieves booking details by reference code.
      * Enforces ownership authorization (only the booking owner or admin can inspect).
      */
