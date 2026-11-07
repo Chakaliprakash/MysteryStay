@@ -28,10 +28,14 @@
   - Mockito unit tests and MockMvc integration tests (17/17 test suite passing)
   - Interactive property onboarding and admin verification panel in React frontend
 
-- [ ] **Phase 4: Room Inventory Engine**
-  - Room category definitions
-  - Daily inventory calendar
-  - Pessimistic locking queries for atomic reservation
+- [x] **Phase 4: Room Inventory Engine**
+  - Flyway migration `V4__room_inventory_schema.sql` (`room_types`, `room_inventories`)
+  - Room category definitions and retail base pricing with `DECIMAL(10,2)`
+  - Daily inventory calendar engine tracking `total_rooms`, `booked_rooms`, and `available_rooms`
+  - Concurrency locking with `@Lock(LockModeType.PESSIMISTIC_WRITE)` preventing negative room availability
+  - Multi-day stay date range availability and pricing calculator
+  - Mockito unit tests and MockMvc integration tests (24/24 test suite passing)
+  - Interactive room category and calendar seeding interface in React frontend
 
 - [ ] **Phase 5: Mystery Deals Engine**
   - Discounted pricing engine
