@@ -16,7 +16,9 @@ import {
   checkRoomAvailability,
   fetchPublicDeals,
   createMysteryDeal,
-  fetchMyDeals
+  fetchMyDeals,
+  searchMysteryDeals,
+  fetchBestStayWindow
 } from './api/client';
 import {
   Shield,
@@ -37,7 +39,12 @@ import {
   DollarSign,
   Tag,
   Percent,
-  EyeOff
+  EyeOff,
+  Search,
+  SlidersHorizontal,
+  Cpu,
+  Zap,
+  TrendingDown
 } from 'lucide-react';
 
 export default function App() {
@@ -109,6 +116,68 @@ export default function App() {
   });
   const [dealMessage, setDealMessage] = useState(null);
   const [dealLoading, setDealLoading] = useState(false);
+
+  // Phase 6: DSA Search & Stay Optimizer State
+  const [searchFilters, setSearchFilters] = useState({
+    city: '',
+    minRating: '',
+    maxPrice: '',
+    k: 5,
+    sortBy: 'VALUE_SCORE',
+    amenities: []
+  });
+  const [searchResult, setSearchResult] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [activeWindow, setActiveWindow] = useState(null);
+  const [windowLoading, setWindowLoading] = useState(false);
+
+  const handleSearch = async (e) => {
+    if (e) e.preventDefault();
+    setSearchLoading(true);
+    setActiveWindow(null);
+    try {
+      const params = {};
+      if (searchFilters.city) params.city = searchFilters.city;
+      if (searchFilters.minRating) params.minRating = parseInt(searchFilters.minRating, 10);
+      if (searchFilters.maxPrice) params.maxPrice = parseFloat(searchFilters.maxPrice);
+      if (searchFilters.k) params.k = parseInt(searchFilters.k, 10);
+      if (searchFilters.sortBy) params.sortBy = searchFilters.sortBy;
+      if (searchFilters.amenities && searchFilters.amenities.length > 0) {
+        params.amenities = searchFilters.amenities.join(',');
+      }
+
+      const res = await searchMysteryDeals(params);
+      setSearchResult(res.data);
+    } catch {
+      // Ignored
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleCalculateBestWindow = async (dealId, stayLength = 3) => {
+    setWindowLoading(true);
+    try {
+      const res = await fetchBestStayWindow(dealId, stayLength);
+      setActiveWindow(res.data);
+    } catch {
+      // Ignored
+    } finally {
+      setWindowLoading(false);
+    }
+  };
+
+  const toggleAmenityFilter = (amenityName) => {
+    setSearchFilters(prev => {
+      const exists = prev.amenities.includes(amenityName);
+      return {
+        ...prev,
+        amenities: exists
+          ? prev.amenities.filter(a => a !== amenityName)
+          : [...prev.amenities, amenityName]
+      };
+    });
+  };
 
   const fetchHealth = async () => {
     setLoading(true);
@@ -297,7 +366,7 @@ export default function App() {
               <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
                 MysteryStay
                 <span className="text-xs bg-emerald-500/20 text-emerald-400 font-mono px-2 py-0.5 rounded-full border border-emerald-500/30">
-                  Phase 5: Mystery Deals
+                  Phase 6: DSA Search & Recommendations
                 </span>
               </h1>
               <p className="text-xs text-slate-400">Intelligent Mystery Hotel Booking Platform</p>
@@ -347,6 +416,230 @@ export default function App() {
             Premium hotels monetize unsold room inventory without compromising retail price integrity. 
             Hotel brand names and street addresses are strictly masked until reservation confirmation.
           </p>
+        </div>
+
+        {/* Phase 6: DSA Search & Value Recommendation Engine */}
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 gap-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                <Cpu className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  DSA Search & Top-K Value Ranker
+                  <span className="text-[10px] font-mono bg-purple-500/10 text-purple-300 border border-purple-500/20 px-2 py-0.5 rounded-full">
+                    Min-Heap O(N log K)
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Sub-millisecond multi-attribute inverted index intersection & bounded priority queue ranking
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleSearch}
+              disabled={searchLoading}
+              className="inline-flex items-center justify-center space-x-2 text-xs font-semibold px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 transition text-white shadow-lg shadow-indigo-500/25 disabled:opacity-50"
+            >
+              <Zap className={`w-3.5 h-3.5 ${searchLoading ? 'animate-spin' : ''}`} />
+              <span>{searchLoading ? 'Computing Scores...' : 'Run DSA Search'}</span>
+            </button>
+          </div>
+
+          {/* Search Controls */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-[11px] font-medium text-slate-400 mb-1.5">Destination City</label>
+              <input
+                type="text"
+                value={searchFilters.city}
+                onChange={(e) => setSearchFilters({ ...searchFilters, city: e.target.value })}
+                placeholder="e.g. Bangalore, Mumbai"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-400 mb-1.5">Min Star Tier</label>
+              <select
+                value={searchFilters.minRating}
+                onChange={(e) => setSearchFilters({ ...searchFilters, minRating: e.target.value })}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+              >
+                <option value="">Any Star Rating</option>
+                <option value="3">3★ & Above</option>
+                <option value="4">4★ & Above</option>
+                <option value="5">5★ Luxury Only</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-400 mb-1.5">Max Budget ($/Night)</label>
+              <input
+                type="number"
+                value={searchFilters.maxPrice}
+                onChange={(e) => setSearchFilters({ ...searchFilters, maxPrice: e.target.value })}
+                placeholder="e.g. 250"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-400 mb-1.5">Top-K Selection Window</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[3, 5, 10].map(kVal => (
+                  <button
+                    key={kVal}
+                    type="button"
+                    onClick={() => setSearchFilters({ ...searchFilters, k: kVal })}
+                    className={`py-2 text-xs font-semibold rounded-xl border transition ${
+                      searchFilters.k === kVal
+                        ? 'bg-indigo-600 border-indigo-500 text-white shadow-md'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Top {kVal}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Luxury Amenity Clue Chips */}
+          <div>
+            <label className="block text-[11px] font-medium text-slate-400 mb-2">
+              Inverted Index Clue Filters (Set Intersection)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {['Infinity Pool', 'Spa & Wellness', 'Fine Dining Restaurant', 'Rooftop Lounge', 'Free High-Speed WiFi'].map(amenity => {
+                const selected = searchFilters.amenities.includes(amenity);
+                return (
+                  <button
+                    key={amenity}
+                    type="button"
+                    onClick={() => toggleAmenityFilter(amenity)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
+                      selected
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm'
+                        : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    {selected ? '✓ ' : '+ '}
+                    {amenity}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Algorithmic Profiling Banner */}
+          {searchResult && (
+            <div className="bg-slate-950 border border-slate-800/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-3">
+              <div className="flex items-center space-x-2 text-indigo-300">
+                <Zap className="w-4 h-4 text-amber-400" />
+                <span className="font-semibold">{searchResult.algorithmUsed}</span>
+              </div>
+              <div className="flex items-center space-x-4 text-slate-400 font-mono text-[11px]">
+                <span>Evaluated: <strong className="text-white">{searchResult.totalCandidatesEvaluated}</strong></span>
+                <span>•</span>
+                <span>Top-K: <strong className="text-emerald-400">{searchResult.returnedCount}</strong></span>
+                <span>•</span>
+                <span>Latency: <strong className="text-amber-400">{searchResult.executionTimeMicros} µs</strong></span>
+              </div>
+            </div>
+          )}
+
+          {/* Ranked Search Results */}
+          {searchResult && searchResult.deals.length > 0 && (
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Top-K Highest Value Mystery Deals
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {searchResult.deals.map((item, idx) => (
+                  <div key={item.deal.dealId} className="bg-slate-950 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between space-y-4 relative">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                        Rank #{idx + 1} • Value Score: {item.valueScore.toFixed(2)}
+                      </span>
+                      <span className="text-xs font-bold text-amber-400 flex items-center gap-1">
+                        <Percent className="w-3 h-3" />
+                        {item.deal.discountPercent}% OFF
+                      </span>
+                    </div>
+
+                    <div>
+                      <div className="text-[11px] text-slate-400 flex items-center gap-1 mb-1">
+                        <MapPin className="w-3 h-3" />
+                        <span>{item.deal.zoneArea}, {item.deal.city} ({item.deal.starRating}★)</span>
+                      </div>
+                      <h5 className="text-sm font-bold text-white mb-1.5">{item.deal.mysteryTitle}</h5>
+                      <p className="text-[11px] text-slate-400 line-clamp-2 mb-3">{item.deal.descriptionClues}</p>
+                      <p className="text-[10px] font-mono text-purple-300 bg-purple-950/40 border border-purple-800/30 p-2 rounded-lg">
+                        {item.explanation}
+                      </p>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
+                      <div>
+                        <div className="text-[10px] text-slate-500 line-through">${item.deal.originalPrice.toFixed(2)}</div>
+                        <div className="text-base font-extrabold text-emerald-400">
+                          ${item.deal.mysteryPrice.toFixed(2)}
+                          <span className="text-[10px] text-slate-400 font-normal">/nt</span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleCalculateBestWindow(item.deal.dealId, 3)}
+                        disabled={windowLoading}
+                        className="inline-flex items-center space-x-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+                      >
+                        <TrendingDown className="w-3 h-3 text-emerald-400" />
+                        <span>Best 3-Nt Window</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Sliding Window Optimizer Output Card */}
+          {activeWindow && (
+            <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-5 animate-in fade-in space-y-3">
+              <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2">
+                <div className="flex items-center space-x-2 text-emerald-400 text-xs font-bold">
+                  <TrendingDown className="w-4 h-4" />
+                  <span>Sliding Window Result: Optimal {activeWindow.stayLength}-Night Stay</span>
+                </div>
+                <span className="text-[10px] font-mono text-emerald-300">
+                  {activeWindow.algorithmUsed} ({activeWindow.executionTimeMicros} µs)
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs pt-1">
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Optimal Check-In</span>
+                  <strong className="text-white font-mono">{activeWindow.bestCheckInDate}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Optimal Check-Out</span>
+                  <strong className="text-white font-mono">{activeWindow.bestCheckOutDate}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Total Stay Cost</span>
+                  <strong className="text-emerald-400 font-bold">${activeWindow.totalCost.toFixed(2)}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Guest Savings vs Peak</span>
+                  <strong className="text-amber-400 font-bold">+${activeWindow.savingsVsWorstWindow.toFixed(2)}</strong>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Phase 5 Public Mystery Deals Explorer */}

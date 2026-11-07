@@ -133,4 +133,17 @@ export const fetchMyDeals = async () => {
   return response.data;
 };
 
+// Search & DSA Recommendations (Phase 6)
+export const searchMysteryDeals = async (searchParams) => {
+  const response = await api.get('/search/deals', { params: searchParams });
+  return response.data;
+};
+
+export const fetchBestStayWindow = async (dealId, stayLength = 3) => {
+  const response = await api.get(`/search/deals/${dealId}/best-window`, {
+    params: { stayLength }
+  });
+  return response.data;
+};
+
 export default api;

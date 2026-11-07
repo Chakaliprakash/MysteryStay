@@ -76,6 +76,7 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/hotels/*/room-types", "/api/v1/room-types/**").permitAll()
                         .requestMatchers("/api/v1/deals/my").authenticated()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/deals", "/api/v1/deals/*").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/search/**").permitAll()
                         .requestMatchers("/api/v1/auth/me").authenticated()
                         .anyRequest().authenticated()
                 )

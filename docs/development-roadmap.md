@@ -46,10 +46,13 @@
   - Mockito unit tests and MockMvc integration tests (29/29 test suite passing)
   - Interactive mystery deal discovery feed and manager deal creator in React frontend
 
-- [ ] **Phase 6: DSA-Powered Search & Recommendations**
-  - Min/Max Heap (PriorityQueue) Top-$K$ deal ranker
-  - Inverted index for fast tag/amenity filtering
-  - Sliding window for calendar price-drop detection
+- [x] **Phase 6: DSA-Powered Search & Recommendations**
+  - Top-$K$ Mystery Deal Ranker via Bounded Min-Heap (`PriorityQueue`): $O(N \log K)$ time and $O(K)$ space with dynamic multi-factor value scoring
+  - Multi-Attribute Inverted Index (`HashMap` + `HashSet`): $O(\min(|S_1|, \dots, |S_m|))$ sub-millisecond set intersection filtering on city, star rating, and luxury amenity clues
+  - Consecutive Stay Calendar Price Optimizer via Sliding Window: $O(D)$ linear-time cheapest stay window detector with $O(1)$ space
+  - Formal DSA architectural & interview documentation in `docs/dsa-implementations.md`
+  - Automated tests (43/43 total project tests passing)
+  - Interactive DSA Search & Stay Optimizer explorer in React frontend with live algorithmic metrics
 
 - [ ] **Phase 7: Booking Engine & Concurrency Control**
   - Multi-step transactional booking state machine
