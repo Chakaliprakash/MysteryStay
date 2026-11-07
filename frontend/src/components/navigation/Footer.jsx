@@ -17,6 +17,9 @@ export const Footer = () => {
                 MysteryStay
               </span>
             </div>
+            <p className="text-xs font-medium text-[#DFCA9E] italic">
+              "Discover Hidden Stays. Unlock Better Deals."
+            </p>
             <p className="text-sm text-white/60 max-w-sm leading-relaxed">
               Monetizing perishable 5-star hotel inventory without brand dilution. Guaranteed luxury accommodations unlocked with strict rate parity protection.
             </p>
@@ -99,24 +102,26 @@ export const Footer = () => {
 
           <div>
             <h4 className="font-semibold text-white uppercase tracking-wider mb-4">
-              Governance
+              Founder & System
             </h4>
             <ul className="space-y-2.5 text-white/60">
+              <li><Link to="/about" className="hover:text-[#C6A66B] font-medium text-white/90">About Founder: Prakash Chakali</Link></li>
               <li><Link to="/admin" className="hover:text-[#C6A66B]">Platform Admin Console</Link></li>
               <li><span className="text-white/40">Spring Boot 3.3.5 Modular Monolith</span></li>
               <li><span className="text-white/40">MySQL 9.x Flyway Migrations (v7)</span></li>
-              <li><span className="text-white/40">HMAC-SHA256 Cryptographic Verification</span></li>
             </ul>
           </div>
         </div>
 
-        {/* Copyright */}
-        <div className="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/40">
-          <p>© 2026 MysteryStay Inc. All Rights Reserved. Engineered with precision.</p>
+        {/* Copyright & Creator Credit */}
+        <div className="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/50">
+          <p>
+            © 2026 <strong className="text-white">MysteryStay</strong> • Founder & Developer: <strong className="text-[#C6A66B]">Prakash Chakali</strong> • <span className="italic text-white/70">Discover Hidden Stays. Unlock Better Deals.</span>
+          </p>
           <div className="flex items-center gap-6">
-            <span className="hover:text-white cursor-pointer">Privacy Charter</span>
-            <span className="hover:text-white cursor-pointer">Identity Masking Policy</span>
-            <span className="hover:text-white cursor-pointer">Terms of Service</span>
+            <Link to="/about" className="hover:text-white cursor-pointer text-[#C6A66B]">Founder Profile</Link>
+            <span className="hover:text-white cursor-pointer">Java 21 Monolith</span>
+            <span className="hover:text-white cursor-pointer">React 18</span>
           </div>
         </div>
       </div>

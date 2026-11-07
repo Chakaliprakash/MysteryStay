@@ -21,14 +21,16 @@ export const Navbar = () => {
 
   return (
     <header className="sticky top-0 z-40 bg-[#F8F6F0]/90 backdrop-blur-md border-b border-[#E4DFD5]">
-      {/* Top Banner: Persona Switcher */}
+      {/* Top Banner: Persona Switcher & Creator Credit */}
       <div className="bg-[#14251F] text-[#F8F6F0] py-1.5 px-4 sm:px-8 text-xs font-medium">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#0D8A5E] animate-pulse" />
             <span className="text-[#C6A66B] font-semibold">Live Monolith</span>
             <span className="text-white/40">•</span>
-            <span className="hidden sm:inline text-white/70">Rate-Parity Identity Masking Engine</span>
+            <span className="text-white/90">Founder & Developer: <strong className="text-[#DFCA9E]">Prakash Chakali</strong></span>
+            <span className="text-white/40 hidden md:inline">•</span>
+            <span className="hidden md:inline text-white/70">"Discover Hidden Stays. Unlock Better Deals."</span>
           </div>
 
           <div className="flex items-center gap-1.5 bg-[#0C1814] px-2 py-0.5 rounded-full border border-white/10">
@@ -78,8 +80,8 @@ export const Navbar = () => {
             <span className="font-editorial text-2xl tracking-tight text-[#14251F] block leading-none">
               MysteryStay
             </span>
-            <span className="text-[10px] tracking-widest uppercase font-semibold text-[#C6A66B] block mt-0.5">
-              Haute Hospitality
+            <span className="text-[10px] tracking-wider uppercase font-semibold text-[#C6A66B] block mt-0.5">
+              Discover Hidden Stays. Unlock Better Deals.
             </span>
           </div>
         </Link>
@@ -108,6 +110,18 @@ export const Navbar = () => {
           >
             <Cpu className="w-4 h-4 text-[#C6A66B]" />
             DSA Laboratory
+          </Link>
+
+          <Link
+            to="/about"
+            className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-1.5 ${
+              isActive('/about')
+                ? 'bg-[#14251F] text-[#F8F6F0]'
+                : 'text-[#14251F] hover:bg-[#EFECE4]'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-[#C6A66B]" />
+            About Founder
           </Link>
 
           <Link
@@ -154,15 +168,15 @@ export const Navbar = () => {
         {/* User Badge & Quick CTA */}
         <div className="hidden sm:flex items-center gap-3">
           <div className="text-right">
-            <span className="text-xs font-semibold text-[#14251F] block">
-              {user?.fullName?.split(' ')[0] || 'Traveler'}
+            <span className="text-xs font-bold text-[#14251F] block">
+              Prakash Chakali
             </span>
-            <span className="text-[10px] text-[#5A626A] block">
+            <span className="text-[10px] text-[#C6A66B] font-semibold block">
               {role === 'ROLE_ADMIN'
-                ? 'Platform Admin'
+                ? 'Platform Owner (Admin)'
                 : role === 'ROLE_HOTEL_MANAGER'
-                ? 'Hotel Partner'
-                : 'Verified Member'}
+                ? 'Hotel Partner Lead'
+                : 'Verified Traveler'}
             </span>
           </div>
           <Link
@@ -199,6 +213,13 @@ export const Navbar = () => {
             className="block px-3 py-2 rounded-lg text-sm font-medium text-[#14251F] hover:bg-[#EFECE4]"
           >
             DSA Laboratory
+          </Link>
+          <Link
+            to="/about"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block px-3 py-2 rounded-lg text-sm font-medium text-[#14251F] hover:bg-[#EFECE4]"
+          >
+            About Founder
           </Link>
           <Link
             to="/trips"

@@ -71,17 +71,17 @@ export const LandingPage = () => {
 
         {/* Hero Content */}
         <div className="relative z-10 max-w-5xl mx-auto text-center space-y-8 mt-12">
-          {/* Trust Pill */}
+          {/* Trust Pill & Creator Credit */}
           <motion.div
             initial={{ opacity: 0, y: -16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#14251F]/80 backdrop-blur-md border border-[#C6A66B]/50 text-white text-xs font-medium shadow-2xl"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#14251F]/90 backdrop-blur-md border border-[#C6A66B]/60 text-white text-xs font-medium shadow-2xl"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#C6A66B]" />
-            <span className="text-[#C6A66B] font-bold">Unsold Inventory Unmasked</span>
+            <span>Architected & Engineered by <strong className="text-[#DFCA9E] font-bold">Prakash Chakali</strong></span>
             <span className="text-white/40">•</span>
-            <span>20% to 70% Off 5-Star Suites</span>
+            <span className="text-[#C6A66B] font-bold">Unsold Inventory Unmasked</span>
           </motion.div>
 
           {/* Large Editorial Headline */}
@@ -462,6 +462,84 @@ export const LandingPage = () => {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* 8. ABOUT THE FOUNDER & DEVELOPER SECTION */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-8">
+        <div className="bg-white rounded-3xl border border-[#E4DFD5] p-8 sm:p-14 shadow-luxury-lg space-y-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-[#EFECE4]">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-widest text-[#C6A66B] flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" /> Leadership & Engineering
+              </span>
+              <h2 className="font-editorial text-3xl sm:text-5xl text-[#14251F] mt-1">
+                About the Founder & Developer
+              </h2>
+              <p className="text-sm font-light text-[#8C6D32] italic mt-1">
+                "Discover Hidden Stays. Unlock Better Deals."
+              </p>
+            </div>
+
+            <Link
+              to="/about"
+              className="px-5 py-2.5 rounded-xl bg-[#14251F] hover:bg-[#1A2F27] text-white text-xs font-semibold inline-flex items-center gap-2 transition-all shadow-luxury"
+            >
+              Read Full Founder Story <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            {/* Developer Profile Card / Photo Placeholder */}
+            <div className="lg:col-span-4 flex flex-col items-center justify-center text-center">
+              <div className="relative w-44 h-44 sm:w-52 sm:h-52 rounded-3xl overflow-hidden bg-gradient-to-br from-[#14251F] to-[#0C1814] border-2 border-[#C6A66B] shadow-2xl flex flex-col items-center justify-center p-4">
+                <img 
+                  src="/prakash-chakali.jpg" 
+                  alt="Prakash Chakali" 
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="w-20 h-20 rounded-2xl bg-[#C6A66B]/20 border border-[#C6A66B]/40 flex items-center justify-center text-[#DFCA9E] font-editorial text-3xl font-bold mb-3 shadow-inner">
+                  PC
+                </div>
+                <span className="text-xs font-bold text-white tracking-wider uppercase">
+                  Prakash Chakali
+                </span>
+                <span className="text-[10px] text-[#C6A66B] font-medium tracking-wide">
+                  Founder & Developer
+                </span>
+              </div>
+            </div>
+
+            {/* Official Bio Statement */}
+            <div className="lg:col-span-8 space-y-5">
+              <div className="space-y-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#C6A66B]">
+                  Engineering Perspective
+                </span>
+                <h3 className="font-editorial text-2xl sm:text-3xl text-[#14251F]">
+                  Prakash Chakali
+                </h3>
+              </div>
+
+              <div className="p-6 bg-[#F8F6F0] rounded-2xl border-l-4 border-[#C6A66B] space-y-3">
+                <p className="text-xs sm:text-sm text-[#1C1F24] leading-relaxed">
+                  "I am a passionate Java developer focused on building scalable, user-friendly applications using Java, Spring Boot, React, and MySQL. I enjoy solving real-world problems through technology, exploring data structures and algorithms, and designing modern software experiences."
+                </p>
+                <p className="text-xs sm:text-sm text-[#1C1F24] leading-relaxed">
+                  "MysteryStay reflects my interest in combining innovative ideas with practical technology to make travel more affordable and accessible."
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2 text-[11px] font-medium text-[#14251F]">
+                {['Java 21', 'Spring Boot 3.3.5', 'Spring Security', 'MySQL 9.x Flyway', 'React 18 & Vite', 'Tailwind CSS', 'DSA Top-K Heap', 'Sliding Window'].map((tag) => (
+                  <span key={tag} className="px-2.5 py-1 rounded-lg bg-[#F8F6F0] border border-[#E4DFD5]">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

@@ -83,7 +83,7 @@ export const AdminDashboardPage = () => {
             Compliance & Verification Ledger
           </h1>
           <p className="text-xs text-[#5A626A] mt-1">
-            Logged in as <strong>{user?.fullName || 'Elena Rostova'}</strong> (Administrator)
+            Platform Owner & Lead Engineer: <strong className="text-[#14251F]">Prakash Chakali</strong> (Lead Administrator)
           </p>
         </div>
 

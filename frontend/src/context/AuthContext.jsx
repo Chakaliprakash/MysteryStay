@@ -5,20 +5,20 @@ const AuthContext = createContext(null);
 
 export const PRESET_USERS = {
   CUSTOMER: {
-    email: 'traveler.alex@mysterystay.com',
-    fullName: 'Alex Morgan',
+    email: 'prakash.chakali@mysterystay.com',
+    fullName: 'Prakash Chakali',
     role: 'ROLE_CUSTOMER',
     phone: '+919876543210'
   },
   HOTEL_MANAGER: {
-    email: 'hotel.manager@mysterystay.com',
-    fullName: 'Vikramaditya Roy (Taj Partner)',
+    email: 'prakash.chakali@mysterystay.com',
+    fullName: 'Prakash Chakali (Partner Lead)',
     role: 'ROLE_HOTEL_MANAGER',
     phone: '+919876543211'
   },
   ADMIN: {
-    email: 'admin.lead@mysterystay.com',
-    fullName: 'Elena Rostova (Compliance Director)',
+    email: 'prakash.chakali@mysterystay.com',
+    fullName: 'Prakash Chakali (Platform Owner & Lead Architect)',
     role: 'ROLE_ADMIN',
     phone: '+919876543212'
   }

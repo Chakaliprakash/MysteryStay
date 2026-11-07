@@ -66,3 +66,15 @@ Frontend starts on `http://localhost:5173`.
 cd docker
 docker compose up -d
 ```
+
+---
+
+## Founder & Engineering Leadership
+
+### **Prakash Chakali — Founder & Developer**
+> *"Discover Hidden Stays. Unlock Better Deals."*
+
+I am a passionate Java developer focused on building scalable, user-friendly applications using Java, Spring Boot, React, and MySQL. I enjoy solving real-world problems through technology, exploring data structures and algorithms, and designing modern software experiences.
+
+MysteryStay reflects my interest in combining innovative ideas with practical technology to make travel more affordable and accessible.
+

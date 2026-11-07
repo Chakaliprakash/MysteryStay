@@ -100,7 +100,7 @@ export const OwnerDashboardPage = () => {
             Hotelier Revenue & Yield Console
           </h1>
           <p className="text-xs text-[#5A626A] mt-1">
-            Logged in as <strong>{user?.fullName || 'Manager Roy'}</strong> • Rate Parity Compliant
+            Partner Lead & Platform Owner: <strong className="text-[#14251F]">Prakash Chakali</strong> • Rate Parity Compliant
           </p>
         </div>
 
