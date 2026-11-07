@@ -39,7 +39,11 @@ import {
   Layers,
   Phone,
   Mail,
-  Home
+  Home,
+  ChevronDown,
+  Info,
+  CalendarDays,
+  Users
 } from 'lucide-react';
 import {
   registerUser,
@@ -65,11 +69,11 @@ import {
 
 // Curated high-resolution real-world luxury hotel photography
 const HOTEL_IMAGES = {
-  1: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=80', // Royal Palace Bangalore
-  2: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=900&q=80', // Waterfront Mumbai
-  3: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=900&q=80', // Beachfront Villa Goa
-  4: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=900&q=80', // Heritage Sanctuary Delhi
-  default: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=900&q=80'
+  1: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1000&q=80', // Royal Palace Bangalore
+  2: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=1000&q=80', // Waterfront Mumbai
+  3: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1000&q=80', // Beachfront Villa Goa
+  4: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1000&q=80', // Heritage Sanctuary Delhi
+  default: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1000&q=80'
 };
 
 const CATEGORIES = [
@@ -119,6 +123,7 @@ export default function App() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [activeStayWindow, setActiveStayWindow] = useState(null);
   const [stayWindowLoading, setStayWindowLoading] = useState(false);
+  const [activeStayWindowDealId, setActiveStayWindowDealId] = useState(null);
 
   // Bookings state
   const [myBookings, setMyBookings] = useState([]);
@@ -132,7 +137,7 @@ export default function App() {
     guestName: 'Alex Morgan',
     guestEmail: 'customer@mysterystay.com',
     guestPhone: '+91 98765 43210',
-    specialRequests: 'Quiet room with skyline or pool view'
+    specialRequests: 'Quiet high-floor suite with scenic views'
   });
   const [activeBooking, setActiveBooking] = useState(null);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
@@ -269,10 +274,10 @@ export default function App() {
     }
   };
 
-  // 1-Click Role Switcher
+  // 1-Click Role Switcher Presets
   const handleQuickSwitchRole = async (targetRole) => {
     let credentials = { email: 'customer@mysterystay.com', password: 'Password123!', name: 'Alex Morgan' };
-    let targetTabName = 'deals';
+    let targetTabName = 'explore';
 
     if (targetRole === 'ROLE_HOTEL_MANAGER') {
       credentials = { email: 'manager@grandazure.com', password: 'Password123!', name: 'Robert Sterling' };
@@ -298,7 +303,7 @@ export default function App() {
         loadUserBookings();
       }
     } catch (err) {
-      alert(`Could not sign in as ${targetRole}. Please check server.`);
+      alert(`Could not sign in as ${targetRole}. Please ensure backend is running.`);
     } finally {
       setAuthLoading(false);
     }
@@ -328,7 +333,7 @@ export default function App() {
         setActiveTab('partner');
         loadPartnerData();
       } else {
-        setActiveTab('deals');
+        setActiveTab('explore');
         loadUserBookings();
       }
     } catch (err) {
@@ -380,6 +385,7 @@ export default function App() {
   // Sliding Window Stay Optimizer
   const handleCalculateBestWindow = async (dealId, stayLength = 3) => {
     setStayWindowLoading(true);
+    setActiveStayWindowDealId(dealId);
     try {
       const res = await fetchBestStayWindow(dealId, stayLength);
       setActiveStayWindow(res.data);
@@ -391,7 +397,7 @@ export default function App() {
     }
   };
 
-  // Booking Modal
+  // Booking Modal Handlers
   const openBookingModal = (deal) => {
     setSelectedDealForBooking(deal);
     setActiveBooking(null);
@@ -435,7 +441,7 @@ export default function App() {
       setCountdownSeconds(res.data.secondsRemaining || 900);
       loadUserBookings();
     } catch (err) {
-      alert(err.response?.data?.message || 'Booking reservation failed. Insufficient inventory.');
+      alert(err.response?.data?.message || 'Booking reservation failed. Room sold out.');
     } finally {
       setBookingSubmitting(false);
     }
@@ -457,7 +463,7 @@ export default function App() {
 
   // Cancel Booking
   const handleCancelBooking = async (bookingId) => {
-    if (!confirm('Cancel this reservation? Held rooms are restored to the inventory ledger.')) return;
+    if (!confirm('Cancel this reservation? Held rooms will be returned to the live inventory.')) return;
     try {
       await cancelBooking(bookingId);
       loadUserBookings();
@@ -507,7 +513,7 @@ export default function App() {
     if (sortBy === 'PRICE_ASC') return a.mysteryPrice - b.mysteryPrice;
     if (sortBy === 'DISCOUNT_DESC') return b.discountPercent - a.discountPercent;
     if (sortBy === 'RATING_DESC') return b.starRating - a.starRating;
-    return a.dealId - b.dealId; // Default
+    return a.dealId - b.dealId;
   });
 
   const citySuggestions = ['Bangalore', 'Mumbai', 'Goa', 'Delhi'];
@@ -516,60 +522,60 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col font-sans antialiased selection:bg-[#4F46E5] selection:text-white">
       {/* ========================================================================= */}
-      {/* 1. TOP ANNOUNCEMENT & ROLE SWITCHER BAR */}
+      {/* 1. TOP ANNOUNCEMENT & 1-CLICK ROLE SWITCHER (UI-UX PRO MAX) */}
       {/* ========================================================================= */}
       <div className="bg-[#0F172A] text-white text-xs py-2 px-4 border-b border-slate-800">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center space-x-2 text-[11px] text-slate-300">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="font-semibold text-white">Live Prototype</span>
+            <span className="font-semibold text-white">Full-Stack Monolith Live</span>
             <span className="text-slate-500">•</span>
             <span>MySQL 9.x Connected</span>
             <span className="text-slate-500">•</span>
-            <span>Rate-Parity Identity Masking</span>
+            <span>Zero Public Rate Disruption</span>
           </div>
 
-          {/* 1-Click Role Switcher Presets */}
+          {/* Quick Role Switcher Presets */}
           <div className="flex items-center space-x-2 text-[11px]">
-            <span className="text-slate-400 font-medium">Test Role:</span>
+            <span className="text-slate-400 font-medium">Switch Role:</span>
             <button
               onClick={() => handleQuickSwitchRole('ROLE_CUSTOMER')}
-              className={`px-2.5 py-0.5 rounded-full font-medium transition ${
+              className={`px-3 py-1 rounded-full font-semibold transition ${
                 currentUser?.role === 'ROLE_CUSTOMER'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
-              Traveler
+              👤 Traveler
             </button>
             <button
               onClick={() => handleQuickSwitchRole('ROLE_HOTEL_MANAGER')}
-              className={`px-2.5 py-0.5 rounded-full font-medium transition ${
+              className={`px-3 py-1 rounded-full font-semibold transition ${
                 currentUser?.role === 'ROLE_HOTEL_MANAGER'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
-              Hotel Partner
+              🏨 Hotel Partner
             </button>
             <button
               onClick={() => handleQuickSwitchRole('ROLE_ADMIN')}
-              className={`px-2.5 py-0.5 rounded-full font-medium transition ${
+              className={`px-3 py-1 rounded-full font-semibold transition ${
                 currentUser?.role === 'ROLE_ADMIN'
                   ? 'bg-amber-600 text-white shadow-xs'
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
-              Platform Admin
+              🛡️ Admin
             </button>
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. REAL-WORLD MAIN NAVIGATION HEADER */}
+      {/* 2. MAIN NAVIGATION HEADER */}
       {/* ========================================================================= */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs">
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
           {/* Brand Logo */}
           <div
@@ -586,7 +592,7 @@ export default function App() {
                   Luxe
                 </span>
               </div>
-              <p className="text-[10px] text-slate-500 font-medium">5-Star Unsold Inventory Network</p>
+              <p className="text-[10px] text-slate-500 font-medium">Confidential 5-Star Hotel Network</p>
             </div>
           </div>
 
@@ -594,16 +600,16 @@ export default function App() {
           <nav className="hidden lg:flex items-center space-x-1">
             <button
               onClick={() => setActiveTab('explore')}
-              className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition ${
-                activeTab === 'explore' ? 'text-indigo-600 bg-indigo-50/70' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition ${
+                activeTab === 'explore' ? 'text-indigo-600 bg-indigo-50/80' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               Explore Deals
             </button>
             <button
               onClick={() => setActiveTab('dsa')}
-              className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5 ${
-                activeTab === 'dsa' ? 'text-indigo-600 bg-indigo-50/70' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-1.5 ${
+                activeTab === 'dsa' ? 'text-indigo-600 bg-indigo-50/80' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               <Zap className="w-4 h-4 text-amber-500" />
@@ -614,21 +620,21 @@ export default function App() {
                 setActiveTab('trips');
                 if (currentUser) loadUserBookings();
               }}
-              className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition ${
-                activeTab === 'trips' ? 'text-indigo-600 bg-indigo-50/70' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition ${
+                activeTab === 'trips' ? 'text-indigo-600 bg-indigo-50/80' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               My Trips
             </button>
 
-            {/* Role-Specific Navigation Buttons */}
+            {/* Role Specific Tabs */}
             {(currentUser?.role === 'ROLE_HOTEL_MANAGER' || currentUser?.role === 'ROLE_ADMIN') && (
               <button
                 onClick={() => {
                   setActiveTab('partner');
                   loadPartnerData();
                 }}
-                className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5 ${
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-1.5 ${
                   activeTab === 'partner' ? 'text-emerald-700 bg-emerald-50' : 'text-emerald-600 hover:bg-emerald-50/50'
                 }`}
               >
@@ -643,7 +649,7 @@ export default function App() {
                   setActiveTab('admin');
                   loadAdminData();
                 }}
-                className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5 ${
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-1.5 ${
                   activeTab === 'admin' ? 'text-amber-800 bg-amber-50' : 'text-amber-700 hover:bg-amber-50/50'
                 }`}
               >
@@ -687,32 +693,32 @@ export default function App() {
       </header>
 
       {/* ========================================================================= */}
-      {/* 3. HERO BILLBOARD & LIVE SPOTLIGHT SEARCH (FRESH & LIGHT) */}
+      {/* 3. HERO BILLBOARD & LUXURY SPOTLIGHT SEARCH */}
       {/* ========================================================================= */}
       {activeTab === 'explore' && (
         <section className="relative bg-slate-900 text-white overflow-hidden">
-          {/* High-Resolution Luxury Hotel Resort Background Image */}
+          {/* High-Resolution Luxury Hotel Resort Background */}
           <div
-            className="absolute inset-0 bg-cover bg-center opacity-30 transform scale-105 transition-transform duration-1000"
+            className="absolute inset-0 bg-cover bg-center opacity-35 transform scale-105 transition-transform duration-1000"
             style={{
               backgroundImage: `url('https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1920&q=80')`
             }}
           />
-          {/* Subtle Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-slate-900/40" />
+          {/* Soft Gradient Overlay for Readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-slate-900/30" />
 
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20 text-center space-y-6">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 backdrop-blur-md">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>Up to 70% Off Perishable 5-Star Hotel Inventory</span>
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white border border-white/20 backdrop-blur-md shadow-xs">
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span>Monetizing Unsold Perishable 5-Star Suites at 20% to 70% Off</span>
             </span>
 
             <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight">
               Unlock Confidential <span className="bg-gradient-to-r from-sky-400 via-indigo-300 to-amber-300 bg-clip-text text-transparent">Luxury Stays</span>
             </h1>
             <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto font-normal leading-relaxed">
-              Top luxury hotels monetize unsold suites with zero brand damage.
-              Property identity stays masked until your reservation is locked.
+              Experience premier 5-star properties at unbeatable secret rates.
+              The exact hotel name and street address are revealed immediately upon booking confirmation.
             </p>
 
             {/* REAL-WORLD FLOATING SPOTLIGHT SEARCH BAR */}
@@ -749,7 +755,7 @@ export default function App() {
                 <div className="flex items-center space-x-2 w-full md:w-auto px-2">
                   <button
                     onClick={() => handleRunSearch()}
-                    className="w-full md:w-auto px-7 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition shadow-md shadow-indigo-600/30 flex items-center justify-center gap-2"
+                    className="w-full md:w-auto px-7 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition shadow-md shadow-indigo-600/30 flex items-center justify-center gap-2 active:scale-98"
                   >
                     <Search className="w-4 h-4" />
                     <span>Search Deals</span>
@@ -774,7 +780,7 @@ export default function App() {
                             setSelectedCity(city);
                             handleRunSearch(city);
                           }}
-                          className="px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 text-xs font-medium transition flex items-center gap-1.5"
+                          className="px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 text-xs font-semibold transition flex items-center gap-1.5"
                         >
                           <MapPin className="w-3.5 h-3.5 text-indigo-600" />
                           <span>{city}</span>
@@ -797,7 +803,7 @@ export default function App() {
                             setSearchFilters((prev) => ({ ...prev, amenities: [clue] }));
                             handleRunSearch();
                           }}
-                          className="px-3.5 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-medium transition flex items-center gap-1.5 border border-amber-200"
+                          className="px-3.5 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold transition flex items-center gap-1.5 border border-amber-200"
                         >
                           <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                           <span>{clue}</span>
@@ -852,7 +858,7 @@ export default function App() {
       )}
 
       {/* ========================================================================= */}
-      {/* 4. REAL-WORLD CATEGORY BAR & FILTERS */}
+      {/* 4. PROFESSIONAL CATEGORY BAR & CONTROLS */}
       {/* ========================================================================= */}
       {(activeTab === 'explore' || activeTab === 'deals') && (
         <section className="bg-white border-b border-slate-200 sticky top-18 z-30 shadow-2xs">
@@ -884,7 +890,7 @@ export default function App() {
                     <button
                       key={city}
                       onClick={() => setSelectedCity(city)}
-                      className={`px-3 py-1 rounded-lg font-semibold transition ${
+                      className={`px-3 py-1 rounded-lg font-bold transition ${
                         selectedCity === city
                           ? 'bg-white text-indigo-600 shadow-xs'
                           : 'text-slate-600 hover:text-slate-900'
@@ -899,7 +905,7 @@ export default function App() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-slate-100 border-none rounded-xl px-3 py-1.5 font-semibold text-slate-700 text-xs focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+                  className="bg-slate-100 border-none rounded-xl px-3 py-1.5 font-bold text-slate-700 text-xs focus:ring-2 focus:ring-indigo-600 focus:outline-none cursor-pointer"
                 >
                   <option value="VALUE_SCORE">Top Value Score (DSA)</option>
                   <option value="PRICE_ASC">Price: Low to High</option>
@@ -917,23 +923,23 @@ export default function App() {
       {/* ========================================================================= */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-12">
         {/* ========================================================================= */}
-        {/* VIEW 1: EXPLORE / CURATED DEALS (REAL WORLD LUXURY CARDS) */}
+        {/* VIEW 1: CURATED DEALS (REAL-WORLD LUXURY HOTEL CARDS) */}
         {/* ========================================================================= */}
         {(activeTab === 'explore' || activeTab === 'deals') && (
           <div className="space-y-8 animate-in fade-in duration-300">
-            {/* Header title */}
+            {/* Title Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-4">
               <div>
                 <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
                   Verified Mystery Hotel Deals
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  Showing {filteredDeals.length} confidential properties with protected rate-parity discounts.
+                  Showing {filteredDeals.length} confidential properties with rate-parity protected discounts.
                 </p>
               </div>
               <div className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-200 flex items-center gap-1.5">
                 <EyeOff className="w-3.5 h-3.5" />
-                <span>Hotel name & street address unlocked after payment</span>
+                <span>Hotel name & address revealed instantly upon reservation</span>
               </div>
             </div>
 
@@ -946,20 +952,20 @@ export default function App() {
                     key={deal.dealId}
                     className="luxury-card rounded-2xl overflow-hidden flex flex-col justify-between group"
                   >
-                    {/* Real-World Hotel Photo with Overlays */}
-                    <div className="relative h-56 w-full overflow-hidden bg-slate-100">
+                    {/* Hotel Image with Liquid Glass Badges */}
+                    <div className="relative h-60 w-full overflow-hidden bg-slate-100">
                       <img
                         src={imageUrl}
                         alt={deal.mysteryTitle}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                         loading="lazy"
                       />
-                      {/* Gradient overlay on image */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                      {/* Gradient overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
 
                       {/* Top Badges */}
                       <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-                        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-black/60 text-white backdrop-blur-md border border-white/20 flex items-center gap-1">
+                        <span className="liquid-glass-dark px-3 py-1 rounded-full text-[11px] font-bold text-white flex items-center gap-1.5">
                           <Lock className="w-3 h-3 text-amber-400" />
                           <span>Secret Identity</span>
                         </span>
@@ -975,7 +981,7 @@ export default function App() {
                             <MapPin className="w-3.5 h-3.5 text-indigo-400" />
                             {deal.zoneArea}, {deal.city}
                           </span>
-                          <span className="flex items-center gap-1 text-amber-400 font-bold bg-black/40 px-2 py-0.5 rounded-md backdrop-blur-xs">
+                          <span className="flex items-center gap-1 text-amber-400 font-bold bg-black/50 px-2 py-0.5 rounded-md backdrop-blur-xs">
                             <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                             {deal.starRating}.0 Luxury
                           </span>
@@ -1002,7 +1008,7 @@ export default function App() {
                             {deal.amenityClues.slice(0, 3).map((clue, idx) => (
                               <span
                                 key={idx}
-                                className="text-[10px] font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md"
+                                className="text-[10px] font-semibold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-md"
                               >
                                 {clue}
                               </span>
@@ -1054,7 +1060,7 @@ export default function App() {
         )}
 
         {/* ========================================================================= */}
-        {/* VIEW 2: DSA INTELLIGENCE ENGINE (ALGORITHMIC PLAYGROUND) */}
+        {/* VIEW 2: DSA RECOMMENDATION ENGINE (ALGORITHMIC PLAYGROUND) */}
         {/* ========================================================================= */}
         {activeTab === 'dsa' && (
           <div className="space-y-8 animate-in fade-in duration-300">
@@ -1089,7 +1095,7 @@ export default function App() {
                   <select
                     value={searchFilters.minRating}
                     onChange={(e) => setSearchFilters({ ...searchFilters, minRating: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-600 cursor-pointer"
                   >
                     <option value="">Any Star Rating</option>
                     <option value="4">4★ & Above</option>
@@ -1164,7 +1170,7 @@ export default function App() {
                   className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-md shadow-indigo-600/20 flex items-center gap-2"
                 >
                   <Zap className={`w-4 h-4 ${searchLoading ? 'animate-spin' : ''}`} />
-                  <span>{searchLoading ? 'Ranking...' : 'Execute Min-Heap Ranker'}</span>
+                  <span>{searchLoading ? 'Ranking Candidates...' : 'Execute Min-Heap Ranker'}</span>
                 </button>
               </div>
             </div>
@@ -1587,7 +1593,7 @@ export default function App() {
                     <select
                       value={dealPublishForm.roomTypeId}
                       onChange={(e) => setDealPublishForm({ ...dealPublishForm, roomTypeId: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 cursor-pointer"
                       required
                     >
                       <option value="">Select Suite</option>
@@ -1619,7 +1625,7 @@ export default function App() {
                       step="5"
                       value={dealPublishForm.discountPercent}
                       onChange={(e) => setDealPublishForm({ ...dealPublishForm, discountPercent: e.target.value })}
-                      className="w-full accent-indigo-600"
+                      className="w-full accent-indigo-600 cursor-pointer"
                     />
                   </div>
                   <button
@@ -1716,7 +1722,7 @@ export default function App() {
                         <td className="px-5 py-4 text-right">
                           <button
                             onClick={() => handleToggleHotelVerification(hotel.id, hotel.verified)}
-                            className={`px-3.5 py-1.5 rounded-lg font-bold text-xs transition ${
+                            className={`px-3.5 py-1.5 rounded-lg font-bold text-xs transition cursor-pointer ${
                               hotel.verified
                                 ? 'bg-rose-50 text-rose-700 hover:bg-rose-100'
                                 : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs'
@@ -1785,7 +1791,7 @@ export default function App() {
                 <button
                   type="submit"
                   disabled={authLoading}
-                  className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-sm"
+                  className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-sm cursor-pointer"
                 >
                   {authLoading ? 'Signing In...' : authMode === 'login' ? 'Sign In' : 'Create Account'}
                 </button>
@@ -1863,7 +1869,7 @@ export default function App() {
                       type="date"
                       value={bookingFormData.checkInDate}
                       onChange={(e) => setBookingFormData({ ...bookingFormData, checkInDate: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 cursor-pointer"
                       required
                     />
                   </div>
@@ -1873,7 +1879,7 @@ export default function App() {
                       type="date"
                       value={bookingFormData.checkOutDate}
                       onChange={(e) => setBookingFormData({ ...bookingFormData, checkOutDate: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 cursor-pointer"
                       required
                     />
                   </div>
@@ -1898,7 +1904,7 @@ export default function App() {
                 <button
                   type="submit"
                   disabled={bookingSubmitting}
-                  className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-sm"
+                  className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-sm cursor-pointer"
                 >
                   {bookingSubmitting ? 'Acquiring Pessimistic Lock...' : 'Lock Reservation (15-Min Hold)'}
                 </button>
@@ -1937,7 +1943,7 @@ export default function App() {
                 <button
                   onClick={() => handleConfirmReservation(activeBooking.bookingId)}
                   disabled={bookingSubmitting}
-                  className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center justify-center gap-2 shadow-sm"
+                  className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                 >
                   <Unlock className="w-4 h-4" />
                   <span>Confirm Payment & Reveal Secret Hotel Identity</span>
@@ -1979,7 +1985,7 @@ export default function App() {
                     closeBookingModal();
                     setActiveTab('trips');
                   }}
-                  className="w-full py-3 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition shadow-sm"
+                  className="w-full py-3 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition shadow-sm cursor-pointer"
                 >
                   View in My Trips
                 </button>
@@ -2008,10 +2014,10 @@ export default function App() {
             <div>
               <h4 className="text-white font-bold mb-3 uppercase tracking-wider text-[11px]">Popular Cities</h4>
               <ul className="space-y-2 text-[11px]">
-                <li><button onClick={() => { setSelectedCity('Bangalore'); setActiveTab('deals'); }} className="hover:text-white">Bangalore Luxury Stays</button></li>
-                <li><button onClick={() => { setSelectedCity('Mumbai'); setActiveTab('deals'); }} className="hover:text-white">Mumbai Waterfront Villas</button></li>
-                <li><button onClick={() => { setSelectedCity('Goa'); setActiveTab('deals'); }} className="hover:text-white">Goa Beachfront Suites</button></li>
-                <li><button onClick={() => { setSelectedCity('Delhi'); setActiveTab('deals'); }} className="hover:text-white">Delhi Heritage Palaces</button></li>
+                <li><button onClick={() => { setSelectedCity('Bangalore'); setActiveTab('deals'); }} className="hover:text-white cursor-pointer">Bangalore Luxury Stays</button></li>
+                <li><button onClick={() => { setSelectedCity('Mumbai'); setActiveTab('deals'); }} className="hover:text-white cursor-pointer">Mumbai Waterfront Villas</button></li>
+                <li><button onClick={() => { setSelectedCity('Goa'); setActiveTab('deals'); }} className="hover:text-white cursor-pointer">Goa Beachfront Suites</button></li>
+                <li><button onClick={() => { setSelectedCity('Delhi'); setActiveTab('deals'); }} className="hover:text-white cursor-pointer">Delhi Heritage Palaces</button></li>
               </ul>
             </div>
 
@@ -2031,19 +2037,19 @@ export default function App() {
               <div className="space-y-2">
                 <button
                   onClick={() => handleQuickSwitchRole('ROLE_CUSTOMER')}
-                  className="w-full text-left px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium"
+                  className="w-full text-left px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium cursor-pointer"
                 >
                   👤 Traveler View
                 </button>
                 <button
                   onClick={() => handleQuickSwitchRole('ROLE_HOTEL_MANAGER')}
-                  className="w-full text-left px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium"
+                  className="w-full text-left px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium cursor-pointer"
                 >
                   🏨 Hotel Partner View
                 </button>
                 <button
                   onClick={() => handleQuickSwitchRole('ROLE_ADMIN')}
-                  className="w-full text-left px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium"
+                  className="w-full text-left px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium cursor-pointer"
                 >
                   🛡️ Platform Admin View
                 </button>

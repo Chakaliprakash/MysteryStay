@@ -70,6 +70,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/logout",
                                 "/api/v1/health/**",
                                 "/api/v1/amenities/**",
+                                "/api/v1/payments/webhook",
                                 "/actuator/**",
                                 "/error"
                         ).permitAll()

@@ -33,4 +33,9 @@ app:
     secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
     access-token-expiration-ms: 900000 # 15 minutes
     refresh-token-expiration-ms: 604800000 # 7 days
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID:rzp_test_MysteryStayDemoKey}
+    key-secret: ${RAZORPAY_KEY_SECRET:MysteryStaySecretSandbox2026}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:MysteryStayWebhookSecret2026}
+    currency: ${RAZORPAY_CURRENCY:USD}
 
