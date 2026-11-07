@@ -64,10 +64,14 @@
   - Automated tests (49/49 total project tests passing)
   - Interactive Apple & Big-Tech inspired UI with glassmorphic cards, native modal checkout, and secret identity unlock celebration
 
-- [ ] **Phase 8: Payment Integration (Razorpay Sandbox)**
-  - Order creation and client checkout
-  - Webhook verification with HMAC-SHA256
-  - Idempotency guarantees and post-payment hotel identity reveal
+- [x] **Phase 8: Payment Integration (Razorpay Sandbox)**
+  - Flyway migration `V7__payment_schema.sql` (`payments` table with constraints & indexes)
+  - Razorpay sandbox order creation with currency & amount validation (`order_` + 14 chars)
+  - Cryptographic verification via HMAC-SHA256 signature calculation using `HexFormat` & timing-resistant comparison (`MessageDigest.isEqual`)
+  - Strict idempotency guards: duplicate client verifications or webhook events return idempotent success without duplicate processing
+  - Webhook processing for asynchronous payment events (`payment.captured`, `payment.failed`)
+  - Cross-module transactional hook: transitions booking to `CONFIRMED` and unlocks full hotel identity
+  - Comprehensive unit and integration test coverage (`PaymentServiceTest`, `PaymentControllerTest`, 58/58 total project tests passing)
 
 - [ ] **Phase 9: Full-Stack Frontend Experience**
   - Modern, responsive UI with Tailwind CSS
